@@ -70,6 +70,7 @@ extern volatile int didsig;
 extern int debug;
 #endif
 
+struct timeval last, last_print_time;
 
 /**
  * the main loop function for tcpreplay.  This is where we figure out
@@ -78,7 +79,7 @@ extern int debug;
 void
 send_packets(pcap_t *pcap, int cache_file_idx)
 {
-    struct timeval last = { 0, 0 }, last_print_time = { 0, 0 }, print_delta, now;
+    struct timeval print_delta, now;
     COUNTER packetnum = 0;
     struct pcap_pkthdr pkthdr;
     const u_char *pktdata = NULL;
