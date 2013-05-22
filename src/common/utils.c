@@ -150,7 +150,8 @@ packet_stats(struct timeval *begin, struct timeval *end,
             pkts_sent, bytes_sent, frac_sec);
     printf("Rated: %.1f Bps, %.2f Mbps, %.2f pps\n",
            bytes_sec, mb_sec, pkts_sec);
-
+    fflush(NULL);
+           
     if (failed)
         printf(COUNTER_SPEC " write attempts failed from full buffers and were repeated\n",
               failed);
