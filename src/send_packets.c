@@ -94,7 +94,6 @@ send_packets(pcap_t *pcap, int cache_file_idx)
     init_delta_time(&delta_ctx);
 
     /* register signals */
-    didsig = 0;
     if (options.speed.mode != SPEED_ONEATATIME) {
         (void)signal(SIGINT, catcher);
     } else {
