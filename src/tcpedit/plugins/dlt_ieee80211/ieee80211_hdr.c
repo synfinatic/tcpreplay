@@ -1,32 +1,40 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2006-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <stdlib.h>
 #include <string.h>
 
-#include "tcpedit.h"
-#include "common.h"
-#include "tcpr.h"
-#include "dlt_utils.h"
-#include "tcpedit_stub.h"
+#include "dlt_plugins-int.h"
 #include "ieee80211.h"
-#include "ieee80211_hdr.h"
 
 /*
  * Does the given 802.11 header have data?
@@ -35,7 +43,7 @@
 int
 ieee80211_is_data(tcpeditdlt_t *ctx, const void *packet, const int pktlen) 
 {
-    uint16_t *frame_control, fc;
+    u_int16_t *frame_control, fc;
     struct tcpr_802_2snap_hdr *snap;
     int hdrlen = 0;
 
@@ -65,7 +73,7 @@ ieee80211_is_data(tcpeditdlt_t *ctx, const void *packet, const int pktlen)
      * So right now, we only look for pure data frames, since I'm not sure what to do with ACK/Poll
      */
 
-    frame_control = (uint16_t *)packet;
+    frame_control = (u_int16_t *)packet;
     fc = ntohs(*frame_control);
 
     /* reserved == no data */
@@ -116,13 +124,13 @@ ieee80211_is_data(tcpeditdlt_t *ctx, const void *packet, const int pktlen)
 int
 ieee80211_is_encrypted(tcpeditdlt_t *ctx, const void *packet, const int pktlen)
 {
-    uint16_t *frame_control, fc;
+    u_int16_t *frame_control, fc;
 
     assert(ctx);
     assert(packet);
     assert(pktlen >= (int)sizeof(ieee80211_hdr_t));
 
-    frame_control = (uint16_t *)packet;
+    frame_control = (u_int16_t *)packet;
     fc = ntohs(*frame_control);
 
     if ((fc & ieee80211_FC_WEP_MASK) == ieee80211_FC_WEP_MASK) {
@@ -142,10 +150,10 @@ ieee80211_get_src(const void *header)
 {
     ieee80211_hdr_t *addr3;
     ieee80211_addr4_hdr_t *addr4;
-    uint16_t *frame_control, fc;
+    u_int16_t *frame_control, fc;
 
     assert(header);
-    frame_control = (uint16_t *)header;
+    frame_control = (u_int16_t *)header;
     fc = ntohs(*frame_control);
 
     if (ieee80211_USE_4(fc)) {
@@ -172,10 +180,10 @@ ieee80211_get_dst(const void *header)
 {
     ieee80211_hdr_t *addr3;
     ieee80211_addr4_hdr_t *addr4;
-    uint16_t *frame_control, fc;
+    u_int16_t *frame_control, fc;
 
     assert(header);
-    frame_control = (uint16_t *)header;
+    frame_control = (u_int16_t *)header;
     fc = ntohs(*frame_control);
 
     if (ieee80211_USE_4(fc)) {
@@ -196,4 +204,3 @@ ieee80211_get_dst(const void *header)
     }
     return NULL;
 }
-

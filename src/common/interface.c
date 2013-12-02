@@ -1,31 +1,49 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2007-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <dirent.h>
 
 #include "config.h"
 #include "defines.h"
 #include "common.h"
 #include "interface.h"
+
+#ifdef DEBUG
+extern int debug;
+#endif
 
 /**
  * Method takes a user specified device name and returns
@@ -60,7 +78,7 @@ get_interface(interface_list_t *list, const char *alias)
         } while (ptr != NULL);
     } else {
         name = (char *)safe_malloc(strlen(alias) + 1);
-        strlcpy(name, alias, (strlen(alias) + 1));
+        strlcpy(name, alias, sizeof(name));
         return(name);
     }
     
@@ -74,9 +92,11 @@ interface_list_t *
 get_interface_list(void)
 {
     interface_list_t *list_head, *list_ptr;
-    char ebuf[PCAP_ERRBUF_SIZE];
+    char ebuf[PCAP_ERRBUF_SIZE], testnic[255];
     pcap_if_t *pcap_if, *pcap_if_ptr;
     int i = 0;
+    DIR *dir;
+    struct dirent *dirdata;
     
 #ifndef HAVE_WIN32
 	/* Unix just has a warning about being root */
@@ -97,6 +117,7 @@ get_interface_list(void)
             list_ptr = list_ptr->next;
         }
         strlcpy(list_ptr->name, pcap_if_ptr->name, sizeof(list_ptr->name));
+        dbgx(3, "Adding %s to interface list", list_ptr->name);
         
         /* description is usually null under Unix */
         if (pcap_if_ptr->description != NULL)
@@ -105,8 +126,31 @@ get_interface_list(void)
         sprintf(list_ptr->alias, "%%%d", i++);
         list_ptr->flags = pcap_if_ptr->flags;
         pcap_if_ptr = pcap_if_ptr->next;
+        i += 1;
     }
     pcap_freealldevs(pcap_if);
+
+    /* look for khial device: https://github.com/boundary/khial */
+    if ((dir = opendir("/dev/char")) != NULL) {
+        while ((dirdata = readdir(dir)) != NULL) {
+            if (strncmp(dirdata->d_name, "testpackets", strlen("testpackets")) == 0) {
+                if (i > 0) {
+                    list_ptr->next = (interface_list_t *)safe_malloc(sizeof(interface_list_t));
+                    list_ptr = list_ptr->next;
+                }
+                dbgx(3, "Adding %s to interface list", dirdata->d_name);
+                snprintf(testnic, 254, "/dev/char/%s", dirdata->d_name);
+                strlcpy(list_ptr->name, testnic, 255);
+                snprintf(testnic, 255, "khial pseudo-nic: %s", dirdata->d_name);
+                strlcpy(list_ptr->description, testnic, 255);
+                strlcpy(list_ptr->alias, dirdata->d_name, 255);
+                i += 1;
+            }
+        }
+
+    }
+
+
     return(list_head);
 }
 

@@ -1,20 +1,33 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2001-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -25,13 +38,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HAVE_SYS_SOCKET
+#include <sys/socket.h>
+#endif
+
 #include "tree.h"
 #include "tcpprep.h"
 #include "tcpprep_opts.h"
-#include "tcpprep_api.h"
 
 extern tcpr_data_tree_t treeroot;
-extern tcpprep_t *tcpprep;
+extern tcpprep_opt_t options;
 #ifdef DEBUG
 extern int debug;
 #endif
@@ -63,7 +79,6 @@ tree_buildcidr(tcpr_data_tree_t *treeroot, tcpr_buildcidr_t * bcdata)
     unsigned long network = 0;
     struct tcpr_in6_addr network6;
     unsigned long mask = ~0;    /* turn on all bits */
-    tcpprep_opt_t *options = tcpprep->options;
     int i, j, k;
 
     dbg(1, "Running: tree_buildcidr()");
@@ -80,7 +95,7 @@ tree_buildcidr(tcpr_data_tree_t *treeroot, tcpr_buildcidr_t * bcdata)
          */
         dbgx(4, "Checking if %s exists in cidrdata...", get_addr2name4(node->u.ip, RESOLVE));
         if (node->family == AF_INET) {
-            if (! check_ip_cidr(options->cidrdata, node->u.ip)) {   /* if we exist, abort */
+            if (! check_ip_cidr(options.cidrdata, node->u.ip)) {   /* if we exist, abort */
                 dbgx(3, "Node %s doesn't exist... creating.", 
                     get_addr2name4(node->u.ip, RESOLVE));
                 newcidr = new_cidr();
@@ -88,12 +103,12 @@ tree_buildcidr(tcpr_data_tree_t *treeroot, tcpr_buildcidr_t * bcdata)
                 network = node->u.ip & (mask << (32 - bcdata->masklen));
                 dbgx(3, "Using network: %s", get_addr2name4(network, RESOLVE));
                 newcidr->u.network = network;
-                add_cidr(&options->cidrdata, &newcidr);
+                add_cidr(&options.cidrdata, &newcidr);
             }
         } 
         /* Check IPv6 Address */
         else if (node->family == AF_INET6) {
-            if (! check_ip6_cidr(options->cidrdata, &node->u.ip6)) {   /* if we exist, abort */
+            if (! check_ip6_cidr(options.cidrdata, &node->u.ip6)) {   /* if we exist, abort */
                 dbgx(3, "Node %s doesn't exist... creating.",
                     get_addr2name6(&node->u.ip6, RESOLVE));
 
@@ -117,7 +132,7 @@ tree_buildcidr(tcpr_data_tree_t *treeroot, tcpr_buildcidr_t * bcdata)
 
                 dbgx(3, "Using network: %s", get_addr2name6(&network6, RESOLVE));
                 newcidr->u.network6 = network6;
-                add_cidr(&options->cidrdata, &newcidr);
+                add_cidr(&options.cidrdata, &newcidr);
             }
         }
     }
@@ -132,7 +147,6 @@ static int
 tree_checkincidr(tcpr_data_tree_t *treeroot, tcpr_buildcidr_t * bcdata)
 {
     tcpr_tree_t *node = NULL;
-    tcpprep_opt_t *options = tcpprep->options;
 
 
     RB_FOREACH(node, tcpr_data_tree_s, treeroot) {
@@ -146,9 +160,9 @@ tree_checkincidr(tcpr_data_tree_t *treeroot, tcpr_buildcidr_t * bcdata)
          * in cases of leaves and last visit add to cidrdata if
          * necessary
          */
-        if (node->family == AF_INET && check_ip_cidr(options->cidrdata, node->u.ip))    /* if we exist, abort */
+        if (node->family == AF_INET && check_ip_cidr(options.cidrdata, node->u.ip))    /* if we exist, abort */
             return 1;
-        if (node->family == AF_INET6 && check_ip6_cidr(options->cidrdata, &node->u.ip6))
+        if (node->family == AF_INET6 && check_ip6_cidr(options.cidrdata, &node->u.ip6))
             return 1;
 
     }
@@ -166,14 +180,13 @@ process_tree(void)
 {
     int mymask = 0;
     tcpr_buildcidr_t *bcdata;
-    tcpprep_opt_t *options = tcpprep->options;
 
 
     dbg(1, "Running: process_tree()");
 
     bcdata = (tcpr_buildcidr_t *)safe_malloc(sizeof(tcpr_buildcidr_t));
 
-    for (mymask = options->max_mask; mymask <= options->min_mask; mymask++) {
+    for (mymask = options.max_mask; mymask <= options.min_mask; mymask++) {
         dbgx(1, "Current mask: %u", mymask);
 
         /* set starting vals */
@@ -194,8 +207,8 @@ process_tree(void)
             return (mymask);    /* success! */
         }
         else {
-            destroy_cidr(options->cidrdata); /* clean up after our mess */
-            options->cidrdata = NULL;
+            destroy_cidr(options.cidrdata); /* clean up after our mess */
+            options.cidrdata = NULL;
         }
     }
 
@@ -259,18 +272,14 @@ check_ip_tree(const int mode, const unsigned long ip)
     }
 #endif
 
-    /*
-     * FIXME: Is this logic correct?  I think this might be backwards :(
-     */
-
     /* return node type if we found the node, else return the default (mode) */
     if (node != NULL) {
         switch (node->type) {
         case DIR_SERVER:
-            return TCPR_DIR_C2S;
+            return TCPR_DIR_S2C;
             break;
         case DIR_CLIENT:
-            return TCPR_DIR_S2C;
+            return TCPR_DIR_C2S;
             break;
         case DIR_UNKNOWN:
         case DIR_ANY:
@@ -284,10 +293,10 @@ check_ip_tree(const int mode, const unsigned long ip)
     return_unknown:
     switch (mode) {
     case DIR_SERVER:
-        return TCPR_DIR_C2S;
+        return TCPR_DIR_S2C;
         break;
     case DIR_CLIENT:
-        return TCPR_DIR_S2C;
+        return TCPR_DIR_C2S;
         break;
     default:
         return -1;
@@ -566,7 +575,6 @@ void
 tree_calculate(tcpr_data_tree_t *treeroot)
 {
     tcpr_tree_t *node;
-    tcpprep_opt_t *options = tcpprep->options;
 
     dbg(1, "Running tree_calculate()");
 
@@ -574,7 +582,7 @@ tree_calculate(tcpr_data_tree_t *treeroot)
         dbgx(4, "Processing %s", get_addr2name4(node->u.ip, RESOLVE));
         if ((node->server_cnt > 0) || (node->client_cnt > 0)) {
             /* type based on: server >= (client*ratio) */
-            if ((double)node->server_cnt >= (double)node->client_cnt * options->ratio) {
+            if ((double)node->server_cnt >= (double)node->client_cnt * options.ratio) {
                 node->type = DIR_SERVER;
                 dbgx(3, "Setting %s to server", 
                         get_addr2name4(node->u.ip, RESOLVE));

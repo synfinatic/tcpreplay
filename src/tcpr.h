@@ -1,59 +1,46 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2006-2010 Aaron Turner.
+ * Copyright (c) 1998 - 2004 Mike D. Schiffman <mike@infonexus.com>
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-/*
+ 
+/* 
  * This header is heavily based off of (in other words basically stolen from)
- * libnet 1.1.3's libnet-headers.h.  Many thanks to Mike D. Schiffman for doing
- * all this work so I basically just needed to do a search and replace to get
- * things to work.
+ * libnet 1.1.3's libnet-headers.h.  Many thanks to Mike for doing all this 
+ * work so I basically just needed to do a search and replace to get things
+ * to work.
 */
 
-#include "config.h"
-
-#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
-
-#ifdef WIN32
-
-#include "msvc_inttypes.h"
-#include "msvc_stdint.h"
-
-#else
-
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#endif
-
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
-#endif
-
-#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
-#endif
-
-#ifdef HAVE_NETINET_IN_SYSTM_H
 #include <netinet/in_systm.h>
-#endif
 
 #ifndef _TCPR_H_
 #define _TCPR_H_
@@ -142,14 +129,14 @@
  */
 struct tcpr_802_1q_hdr
 {
-    uint8_t vlan_dhost[ETHER_ADDR_LEN];  /**< destination ethernet address */
-    uint8_t vlan_shost[ETHER_ADDR_LEN];  /**< source ethernet address */
-    uint16_t vlan_tpi;                   /**< tag protocol ID */
-    uint16_t vlan_priority_c_vid;        /**< priority | VLAN ID */
+    u_int8_t vlan_dhost[ETHER_ADDR_LEN];  /**< destination ethernet address */
+    u_int8_t vlan_shost[ETHER_ADDR_LEN];  /**< source ethernet address */
+    u_int16_t vlan_tpi;                   /**< tag protocol ID */
+    u_int16_t vlan_priority_c_vid;        /**< priority | VLAN ID */
 #define TCPR_802_1Q_PRIMASK   0x0007    /**< priority mask */
 #define TCPR_802_1Q_CFIMASK   0x0001    /**< CFI mask */
 #define TCPR_802_1Q_VIDMASK   0x0fff    /**< vid mask */
-    uint16_t vlan_len;                   /**< length or type (802.3 / Eth 2) */
+    u_int16_t vlan_len;                   /**< length or type (802.3 / Eth 2) */
 };  
 
 /**
@@ -158,14 +145,14 @@ struct tcpr_802_1q_hdr
  */
 struct tcpr_802_1x_hdr
 {
-    uint8_t dot1x_version;               /**< protocol version */
-    uint8_t dot1x_type;                  /**< frame type */
+    u_int8_t dot1x_version;               /**< protocol version */
+    u_int8_t dot1x_type;                  /**< frame type */
 #define TCPR_802_1X_PACKET    0x00      /**< 802.1x packet */
 #define TCPR_802_1X_START     0x01      /**< 802.1x start */
 #define TCPR_802_1X_LOGOFF    0x02      /**< 802.1x logoff */
 #define TCPR_802_1X_KEY       0x03      /**< 802.1x key */
 #define TCPR_802_1X_ENCASFAL  0x04      /**< 802.1x encasfal */
-    uint16_t dot1x_length;               /**< total frame length */
+    u_int16_t dot1x_length;               /**< total frame length */
 };  
 
 /*
@@ -175,11 +162,11 @@ struct tcpr_802_1x_hdr
  */
 struct tcpr_802_2_hdr
 {
-    uint8_t llc_dsap;            /* destination service access point */
-    uint8_t llc_ssap;            /* source service access point */
+    u_int8_t llc_dsap;            /* destination service access point */
+    u_int8_t llc_ssap;            /* source service access point */
 #define TCPR_SAP_STP          0x42
 #define TCPR_SAP_SNAP         0xaa
-    uint16_t llc_control;         /* control field */
+    u_int16_t llc_control;         /* control field */
 };
 
 
@@ -190,11 +177,11 @@ struct tcpr_802_2_hdr
  */
 struct tcpr_802_2snap_hdr
 {
-    uint8_t snap_dsap;           /* destination service access point */
-    uint8_t snap_ssap;           /* destination service access point */
-    uint8_t snap_control;        /* control field */
-    uint8_t snap_oui[3];         /* OUI */
-    uint16_t snap_type;          /* type */
+    u_int8_t snap_dsap;           /* destination service access point */
+    u_int8_t snap_ssap;           /* destination service access point */
+    u_int8_t snap_control;        /* control field */
+    u_int8_t snap_oui[3];         /* OUI */
+    u_int16_t snap_type;          /* type */
 };
 
 
@@ -205,9 +192,9 @@ struct tcpr_802_2snap_hdr
  */
 struct tcpr_802_3_hdr
 {
-    uint8_t  _802_3_dhost[ETHER_ADDR_LEN];/* destination ethernet address */
-    uint8_t  _802_3_shost[ETHER_ADDR_LEN];/* source ethernet address */
-    uint16_t _802_3_len;                 /* packet type ID */
+    u_int8_t  _802_3_dhost[ETHER_ADDR_LEN];/* destination ethernet address */
+    u_int8_t  _802_3_shost[ETHER_ADDR_LEN];/* source ethernet address */
+    u_int16_t _802_3_len;                 /* packet type ID */
 };
 
 
@@ -218,7 +205,7 @@ struct tcpr_802_3_hdr
  */
 struct tcpr_arp_hdr
 {
-    uint16_t ar_hrd;         /* format of hardware address */
+    u_int16_t ar_hrd;         /* format of hardware address */
 #define ARPHRD_NETROM   0   /* from KA9Q: NET/ROM pseudo */
 #define ARPHRD_ETHER    1   /* Ethernet 10Mbps */
 #define ARPHRD_EETHER   2   /* Experimental Ethernet */
@@ -233,10 +220,10 @@ struct tcpr_arp_hdr
 #define ARPHRD_ATM      19  /* ATM */
 #define ARPHRD_METRICOM 23  /* Metricom STRIP (new IANA id) */
 #define ARPHRD_IPSEC    31  /* IPsec tunnel */
-    uint16_t ar_pro;         /* format of protocol address */
-    uint8_t  ar_hln;         /* length of hardware address */
-    uint8_t  ar_pln;         /* length of protocol addres */
-    uint16_t ar_op;          /* operation type */
+    u_int16_t ar_pro;         /* format of protocol address */
+    u_int8_t  ar_hln;         /* length of hardware address */
+    u_int8_t  ar_pln;         /* length of protocol addres */
+    u_int16_t ar_op;          /* operation type */
 #define ARPOP_REQUEST    1  /* req to resolve address */
 #define ARPOP_REPLY      2  /* resp to previous request */
 #define ARPOP_REVREQUEST 3  /* req protocol address given hardware */
@@ -254,9 +241,9 @@ struct tcpr_arp_hdr
 struct tcpr_bgp4_header_hdr
 {
 #define TCPR_BGP4_MARKER_SIZE   16
-    uint8_t marker[TCPR_BGP4_MARKER_SIZE];
-    uint16_t len;
-    uint8_t type;
+    u_int8_t marker[TCPR_BGP4_MARKER_SIZE];
+    u_int16_t len;
+    u_int8_t type;
 #define TCPR_BGP4_OPEN          1
 #define TCPR_BGP4_UPDATE        2
 #define TCPR_BGP4_NOTIFICATION  3
@@ -270,11 +257,11 @@ struct tcpr_bgp4_header_hdr
  */
 struct tcpr_bgp4_open_hdr
 {
-    uint8_t version;
-    uint16_t src_as;
-    uint16_t hold_time;
-    uint32_t bgp_id;
-    uint8_t opt_len;
+    u_int8_t version;
+    u_int16_t src_as;
+    u_int16_t hold_time;
+    u_int32_t bgp_id;
+    u_int8_t opt_len;
 };
 
 /*
@@ -293,7 +280,7 @@ struct tcpr_bgp4_notification_hdr
 #define TCPR_BGP4_HOLD_TIMER_EXPIRED    4
 #define TCPR_BGP4_FINITE_STATE__ERROR   5
 #define TCPR_BGP4_CEASE                 6
-    uint8_t err_code;
+    u_int8_t err_code;
 
 /* Message Header Error subcodes */
 #define TCPR_BGP4_CONNECTION_NOT_SYNCHRONIZED    1
@@ -318,7 +305,7 @@ struct tcpr_bgp4_notification_hdr
 #define TCPR_BGP4_OPTIONAL_ATTRIBUTE_ERROR
 #define TCPR_BGP4_INVALID_NETWORK_FIELD
 #define TCPR_BGP4_MALFORMED_AS_PATH
-    uint8_t err_subcode;
+    u_int8_t err_subcode;
 };
 
 
@@ -336,10 +323,10 @@ struct tcpr_bgp4_notification_hdr
 #define TCPR_PROTO_CDP    200
 struct tcpr_cdp_hdr
 {
-    uint8_t cdp_version;     /* version (should always be 0x01) */
-    uint8_t cdp_ttl;         /* time reciever should hold info in this packet */
-    uint16_t cdp_sum;        /* checksum */
-    uint16_t cdp_type;       /* type */
+    u_int8_t cdp_version;     /* version (should always be 0x01) */
+    u_int8_t cdp_ttl;         /* time reciever should hold info in this packet */
+    u_int16_t cdp_sum;        /* checksum */
+    u_int16_t cdp_type;       /* type */
 #define TCPR_CDP_DEVID    0x1 /* device id */
 #define TCPR_CDP_ADDRESS  0x2 /* address */
 #define TCPR_CDP_PORTID   0x3 /* port id */
@@ -347,7 +334,7 @@ struct tcpr_cdp_hdr
 #define TCPR_CDP_VERSION  0x5 /* version */
 #define TCPR_CDP_PLATFORM 0x6 /* platform */
 #define TCPR_CDP_IPPREFIX 0x7 /* ip prefix */
-    uint16_t cdp_len;        /* type + length + value */
+    u_int16_t cdp_len;        /* type + length + value */
     /* value information done dynamically */
 
 /* CDP capabilities */
@@ -366,8 +353,8 @@ struct tcpr_cdp_hdr
  */
 struct tcpr_cdp_value_hdr
 {
-    uint16_t cdp_type;
-    uint16_t cdp_len;
+    u_int16_t cdp_type;
+    u_int16_t cdp_len;
 };
 
 
@@ -378,23 +365,23 @@ struct tcpr_cdp_value_hdr
  */
 struct tcpr_dhcpv4_hdr
 {
-    uint8_t dhcp_opcode;     /* opcode */
+    u_int8_t dhcp_opcode;     /* opcode */
 #define TCPR_DHCP_REQUEST 0x1
 #define TCPR_DHCP_REPLY   0x2
-    uint8_t dhcp_htype;      /* hardware address type */
-    uint8_t dhcp_hlen;       /* hardware address length */
-    uint8_t dhcp_hopcount;   /* used by proxy servers */
-    uint32_t dhcp_xid;        /* transaction ID */
-    uint16_t dhcp_secs;      /* number of seconds since trying to bootstrap */
-    uint16_t dhcp_flags;     /* flags for DHCP, unused for BOOTP */
-    uint32_t dhcp_cip;        /* client's IP */
-    uint32_t dhcp_yip;        /* your IP */
-    uint32_t dhcp_sip;        /* server's IP */
-    uint32_t dhcp_gip;        /* gateway IP */
-    uint8_t dhcp_chaddr[16]; /* client hardware address */
-    uint8_t dhcp_sname[64];  /* server host name */
-    uint8_t dhcp_file[128];  /* boot file name */
-    uint32_t dhcp_magic;      /* BOOTP magic header */
+    u_int8_t dhcp_htype;      /* hardware address type */
+    u_int8_t dhcp_hlen;       /* hardware address length */
+    u_int8_t dhcp_hopcount;   /* used by proxy servers */
+    u_int32_t dhcp_xid;        /* transaction ID */
+    u_int16_t dhcp_secs;      /* number of seconds since trying to bootstrap */
+    u_int16_t dhcp_flags;     /* flags for DHCP, unused for BOOTP */
+    u_int32_t dhcp_cip;        /* client's IP */
+    u_int32_t dhcp_yip;        /* your IP */
+    u_int32_t dhcp_sip;        /* server's IP */
+    u_int32_t dhcp_gip;        /* gateway IP */
+    u_int8_t dhcp_chaddr[16]; /* client hardware address */
+    u_int8_t dhcp_sname[64];  /* server host name */
+    u_int8_t dhcp_file[128];  /* boot file name */
+    u_int32_t dhcp_magic;      /* BOOTP magic header */
 #define DHCP_MAGIC                  0x63825363
 #define TCPR_BOOTP_MIN_LEN        0x12c
 #define TCPR_DHCP_PAD             0x00
@@ -490,34 +477,24 @@ struct tcpr_dhcpv4_hdr
  */
 struct tcpr_dnsv4_hdr
 {
-    uint16_t h_len;          /* length of the packet - only used with TCP */
-    uint16_t id;             /* DNS packet ID */
-    uint16_t flags;          /* DNS flags */
-    uint16_t num_q;          /* Number of questions */
-    uint16_t num_answ_rr;    /* Number of answer resource records */
-    uint16_t num_auth_rr;    /* Number of authority resource records */
-    uint16_t num_addi_rr;    /* Number of additional resource records */
+    u_int16_t h_len;          /* length of the packet - only used with TCP */
+    u_int16_t id;             /* DNS packet ID */
+    u_int16_t flags;          /* DNS flags */
+    u_int16_t num_q;          /* Number of questions */
+    u_int16_t num_answ_rr;    /* Number of answer resource records */
+    u_int16_t num_auth_rr;    /* Number of authority resource records */
+    u_int16_t num_addi_rr;    /* Number of additional resource records */
 };
 
 #define TCPR_DNS_H TCPR_UDP_DNSV4_H
 struct tcpr_dnsv4udp_hdr
 {
-    uint16_t id;             /* DNS packet ID */
-    uint16_t flags;          /* DNS flags */
-    uint16_t num_q;          /* Number of questions */
-    uint16_t num_answ_rr;    /* Number of answer resource records */
-    uint16_t num_auth_rr;    /* Number of authority resource records */
-    uint16_t num_addi_rr;    /* Number of additional resource records */
-};
-
-/*
- * PPP over Serial with HDLC encapsulation for NetBSD
- */
-struct tcpr_pppserial_hdr
-{
-    uint8_t  address;
-    uint8_t  control;
-    uint16_t protocol;
+    u_int16_t id;             /* DNS packet ID */
+    u_int16_t flags;          /* DNS flags */
+    u_int16_t num_q;          /* Number of questions */
+    u_int16_t num_answ_rr;    /* Number of answer resource records */
+    u_int16_t num_auth_rr;    /* Number of authority resource records */
+    u_int16_t num_addi_rr;    /* Number of additional resource records */
 };
 
 /*
@@ -526,9 +503,9 @@ struct tcpr_pppserial_hdr
  */
 struct tcpr_ethernet_hdr
 {
-    uint8_t  ether_dhost[ETHER_ADDR_LEN];/* destination ethernet address */
-    uint8_t  ether_shost[ETHER_ADDR_LEN];/* source ethernet address */
-    uint16_t ether_type;                 /* protocol */
+    u_int8_t  ether_dhost[ETHER_ADDR_LEN];/* destination ethernet address */
+    u_int8_t  ether_shost[ETHER_ADDR_LEN];/* source ethernet address */
+    u_int16_t ether_type;                 /* protocol */
 };
 
 #ifndef ETHERTYPE_PUP
@@ -561,7 +538,7 @@ struct tcpr_ethernet_hdr
 
 struct tcpr_ether_addr
 {
-    uint8_t  ether_addr_octet[6];        /* Ethernet address */
+    u_int8_t  ether_addr_octet[6];        /* Ethernet address */
 };
 
 /*
@@ -571,22 +548,22 @@ struct tcpr_ether_addr
  *
  *  Note: Organization field is 3 bytes which throws off the
  *        alignment of type.  Therefore fddi_type (19 bytes in) 
- *        is specified as two uint8_ts.
+ *        is specified as two u_int8_ts.
  */
 struct tcpr_fddi_hdr
 {
-    uint8_t  fddi_frame_control;                      /* Class/Format/Priority */
+    u_int8_t  fddi_frame_control;                      /* Class/Format/Priority */
 #define TCPR_FDDI_LLC_FRAME  0x10
 #define TCPR_FDDI_48BIT_ADDR 0x40
 #define TCPR_FDDI_FC_REQD    TCPR_FDDI_LLC_FRAME | TCPR_FDDI_48BIT_ADDR 
-    uint8_t  fddi_dhost[FDDI_ADDR_LEN];               /* destination fddi address */
-    uint8_t  fddi_shost[FDDI_ADDR_LEN];               /* source fddi address */
-    uint8_t  fddi_llc_dsap;                           /* DSAP */
-    uint8_t  fddi_llc_ssap;                           /* SSAP */
-    uint8_t  fddi_llc_control_field;                  /* Class/Format/Priority */
-    uint8_t  fddi_llc_org_code[TCPR_ORG_CODE_SIZE]; /* Organization Code 3-bytes */
-    uint8_t  fddi_type;                               /* Protocol Type */
-    uint8_t  fddi_type1;                              /* see note above. */
+    u_int8_t  fddi_dhost[FDDI_ADDR_LEN];               /* destination fddi address */
+    u_int8_t  fddi_shost[FDDI_ADDR_LEN];               /* source fddi address */
+    u_int8_t  fddi_llc_dsap;                           /* DSAP */
+    u_int8_t  fddi_llc_ssap;                           /* SSAP */
+    u_int8_t  fddi_llc_control_field;                  /* Class/Format/Priority */
+    u_int8_t  fddi_llc_org_code[TCPR_ORG_CODE_SIZE]; /* Organization Code 3-bytes */
+    u_int8_t  fddi_type;                               /* Protocol Type */
+    u_int8_t  fddi_type1;                              /* see note above. */
 #define FDDI_TYPE_IP            0x0800  /* IP protocol */
 #define FDDI_TYPE_ARP           0x0806  /* addr. resolution protocol */
 #define FDDI_TYPE_REVARP        0x8035  /* reverse addr. resolution protocol */
@@ -595,7 +572,7 @@ struct tcpr_fddi_hdr
 
 struct tcpr_fddi_addr
 {
-    uint8_t  fddi_addr_octet[6];        /* FDDI address */
+    u_int8_t  fddi_addr_octet[6];        /* FDDI address */
 };
 
 
@@ -606,7 +583,7 @@ struct tcpr_fddi_addr
  */
 struct tcpr_gre_hdr
 {
-    uint16_t flags_ver;
+    u_int16_t flags_ver;
 #define GRE_CSUM	                        0x8000
 #define GRE_ROUTING	                        0x4000
 #define GRE_KEY		                        0x2000
@@ -621,7 +598,7 @@ struct tcpr_gre_hdr
 #define GRE_VERSION_0                           0x0000
 #define GRE_VERSION_1                           0x0001
 
-    uint16_t type;
+    u_int16_t type;
 #define GRE_SNA                                 0x0004
 #define GRE_OSI_NETWORK_LAYER                   0x00FE
 #define GRE_PUP                                 0x0200
@@ -646,17 +623,17 @@ struct tcpr_gre_hdr
 
     union {
 	struct {
-	    uint16_t sum;  /* optional */
-	    uint16_t offset;    /* optional */
-	    uint32_t key;        /* optional */
-	    uint32_t seq;        /* optional */
+	    u_int16_t sum;  /* optional */
+	    u_int16_t offset;    /* optional */
+	    u_int32_t key;        /* optional */
+	    u_int32_t seq;        /* optional */
 	} _gre;
 
 	struct {
-	    uint16_t payload_s; /* optional */
-	    uint16_t callID;    /* optional */
-	    uint32_t seq;        /* optional */
-	    uint32_t ack;        /* optional */
+	    u_int16_t payload_s; /* optional */
+	    u_int16_t callID;    /* optional */
+	    u_int32_t seq;        /* optional */
+	    u_int32_t ack;        /* optional */
 	} _egre;
     }_data;
 
@@ -683,10 +660,10 @@ struct tcpr_gre_hdr
  */
 struct tcpr_gre_sre_hdr
 {
-    uint16_t af;  /* address familly */
-    uint8_t sre_offset;
-    uint8_t sre_length;
-    uint8_t *routing;
+    u_int16_t af;  /* address familly */
+    u_int8_t sre_offset;
+    u_int8_t sre_length;
+    u_int8_t *routing;
 };
 
 
@@ -698,13 +675,13 @@ struct tcpr_gre_sre_hdr
 struct tcpr_ipv4_hdr
 {
 #ifdef WORDS_BIGENDIAN
-    uint8_t ip_v:4,        /* version */
+    u_int8_t ip_v:4,        /* version */
     ip_hl:4;                /* header length */
 #else
-    uint8_t ip_hl:4,       /* header length */
+    u_int8_t ip_hl:4,       /* header length */
     ip_v:4;                 /* version */
 #endif
-    uint8_t ip_tos;       /* type of service */
+    u_int8_t ip_tos;       /* type of service */
 #ifndef IPTOS_LOWDELAY
 #define IPTOS_LOWDELAY      0x10
 #endif
@@ -717,9 +694,9 @@ struct tcpr_ipv4_hdr
 #ifndef IPTOS_LOWCOST
 #define IPTOS_LOWCOST       0x02
 #endif
-    uint16_t ip_len;         /* total length */
-    uint16_t ip_id;          /* identification */
-    uint16_t ip_off;
+    u_int16_t ip_len;         /* total length */
+    u_int16_t ip_id;          /* identification */
+    u_int16_t ip_off;
 #ifndef IP_RF
 #define IP_RF 0x8000        /* reserved fragment flag */
 #endif
@@ -732,9 +709,9 @@ struct tcpr_ipv4_hdr
 #ifndef IP_OFFMASK
 #define IP_OFFMASK 0x1fff   /* mask for fragmenting bits */
 #endif
-    uint8_t ip_ttl;          /* time to live */
-    uint8_t ip_p;            /* protocol */
-    uint16_t ip_sum;         /* checksum */
+    u_int8_t ip_ttl;          /* time to live */
+    u_int8_t ip_p;            /* protocol */
+    u_int16_t ip_sum;         /* checksum */
     struct in_addr ip_src, ip_dst; /* source and dest address */
 };
 
@@ -770,9 +747,9 @@ struct tcpr_in6_addr
 {
     union
     {
-        uint8_t   __u6_addr8[16];
-        uint16_t  __u6_addr16[8];
-        uint32_t  __u6_addr32[4];
+        u_int8_t   __u6_addr8[16];
+        u_int16_t  __u6_addr16[8];
+        u_int32_t  __u6_addr32[4];
     } __u6_addr;            /* 128-bit IP6 address */
 };
 #define tcpr_s6_addr __u6_addr.__u6_addr8
@@ -787,17 +764,17 @@ struct tcpr_in6_addr
  */
 struct tcpr_ipv6_hdr
 {
-    uint8_t ip_flags[4];     /* version, traffic class, flow label */
-    uint16_t ip_len;         /* total length */
-    uint8_t ip_nh;           /* next header */
-    uint8_t ip_hl;           /* hop limit */
+    u_int8_t ip_flags[4];     /* version, traffic class, flow label */
+    u_int16_t ip_len;         /* total length */
+    u_int8_t ip_nh;           /* next header */
+    u_int8_t ip_hl;           /* hop limit */
     struct tcpr_in6_addr ip_src, ip_dst; /* source and dest address */
 };
 
 struct tcpr_ipv6_ext_hdr_base
 {
-    uint8_t ip_nh;          /* next header */
-    uint8_t ip_len;         /* length of header in 8 octet units (sans 1st) */
+    u_int8_t ip_nh;          /* next header */
+    u_int8_t ip_len;         /* length of header in 8 octet units (sans 1st) */
     /* some more bytes are always here, but we don't know what kind */
 };
 
@@ -814,10 +791,10 @@ struct tcpr_ipv6_ext_hdr_base
 #define TCPR_IPV6_NH_FRAGMENT 44
 struct tcpr_ipv6_frag_hdr
 {
-    uint8_t ip_nh;          /* next header */
-    uint8_t ip_reserved;    /* reserved */
-    uint16_t ip_frag;       /* fragmentation stuff */
-    uint32_t ip_id;         /* id */
+    u_int8_t ip_nh;          /* next header */
+    u_int8_t ip_reserved;    /* reserved */
+    u_int16_t ip_frag;       /* fragmentation stuff */
+    u_int32_t ip_id;         /* id */
 };
 
 /*
@@ -828,10 +805,10 @@ struct tcpr_ipv6_frag_hdr
 #define TCPR_IPV6_NH_ROUTING  43
 struct tcpr_ipv6_routing_hdr
 {
-    uint8_t ip_nh;          /* next header */
-    uint8_t ip_len;         /* length of header in 8 octet units (sans 1st) */
-    uint8_t ip_rtype;       /* routing type */
-    uint8_t ip_segments;    /* segments left */
+    u_int8_t ip_nh;          /* next header */
+    u_int8_t ip_len;         /* length of header in 8 octet units (sans 1st) */
+    u_int8_t ip_rtype;       /* routing type */
+    u_int8_t ip_segments;    /* segments left */
     /* routing information allocated dynamically */
 };
 
@@ -843,8 +820,8 @@ struct tcpr_ipv6_routing_hdr
 #define TCPR_IPV6_NH_DESTOPTS 60
 struct tcpr_ipv6_destopts_hdr
 {
-    uint8_t ip_nh;          /* next header */
-    uint8_t ip_len;         /* length of header in 8 octet units (sans 1st) */
+    u_int8_t ip_nh;          /* next header */
+    u_int8_t ip_len;         /* length of header in 8 octet units (sans 1st) */
     /* destination options information allocated dynamically */
 };
 
@@ -856,8 +833,8 @@ struct tcpr_ipv6_destopts_hdr
 #define TCPR_IPV6_NH_HBH      0
 struct tcpr_ipv6_hbhopts_hdr
 {
-    uint8_t ip_nh;          /* next header */
-    uint8_t ip_len;         /* length of header in 8 octet units (sans 1st) */
+    u_int8_t ip_nh;          /* next header */
+    u_int8_t ip_len;         /* length of header in 8 octet units (sans 1st) */
     /* destination options information allocated dynamically */
 };
 
@@ -871,7 +848,7 @@ struct tcpr_ipv6_hbhopts_hdr
 #endif
 struct tcpr_icmpv6_hdr
 {
-    uint8_t icmp_type;       /* ICMP type */
+    u_int8_t icmp_type;       /* ICMP type */
 #ifndef ICMP6_ECHO
 #define ICMP6_ECHO          128
 #endif
@@ -890,10 +867,10 @@ struct tcpr_icmpv6_hdr
 #ifndef ICMP6_PARAMPROB
 #define ICMP6_PARAMPROB     4
 #endif
-    uint8_t icmp_code;       /* ICMP code */
-    uint16_t icmp_sum;       /* ICMP Checksum */
-    uint16_t id;             /* ICMP id */
-    uint16_t seq;            /* ICMP sequence number */
+    u_int8_t icmp_code;       /* ICMP code */
+    u_int16_t icmp_sum;       /* ICMP Checksum */
+    u_int16_t id;             /* ICMP id */
+    u_int16_t seq;            /* ICMP sequence number */
 };
 
 
@@ -905,7 +882,7 @@ struct tcpr_icmpv6_hdr
  */
 struct tcpr_icmpv4_hdr
 {
-    uint8_t icmp_type;       /* ICMP type */
+    u_int8_t icmp_type;       /* ICMP type */
 #ifndef     ICMP_ECHOREPLY
 #define     ICMP_ECHOREPLY                  0
 #endif
@@ -951,7 +928,7 @@ struct tcpr_icmpv4_hdr
 #ifndef     ICMP_MASKREPLY
 #define     ICMP_MASKREPLY                  18
 #endif
-    uint8_t icmp_code;       /* ICMP code */
+    u_int8_t icmp_code;       /* ICMP code */
 #ifndef     ICMP_UNREACH_NET
 #define     ICMP_UNREACH_NET                0
 #endif
@@ -1022,14 +999,14 @@ struct tcpr_icmpv4_hdr
 #define     ICMP_PARAMPROB_OPTABSENT        1
 #endif
 
-    uint16_t icmp_sum;   /* ICMP Checksum */
+    u_int16_t icmp_sum;   /* ICMP Checksum */
 
     union
     {
         struct
         {
-            uint16_t id; /* ICMP id */
-            uint16_t seq;/* ICMP sequence number */
+            u_int16_t id; /* ICMP id */
+            u_int16_t seq;/* ICMP sequence number */
         } echo;
 
 #undef icmp_id
@@ -1037,27 +1014,27 @@ struct tcpr_icmpv4_hdr
 #define icmp_id     hun.echo.id
 #define icmp_seq    hun.echo.seq
  
-        uint32_t gateway; /* gateway host */
+        u_int32_t gateway; /* gateway host */
         struct
         {
-            uint16_t pad;/* padding */
-            uint16_t mtu;/* MTU size */
+            u_int16_t pad;/* padding */
+            u_int16_t mtu;/* MTU size */
         } frag;
     } hun;
     union
     {
         struct
         {
-            uint32_t its_otime;
-            uint32_t its_rtime;
-            uint32_t its_ttime;
+            n_time its_otime;
+            n_time its_rtime;
+            n_time its_ttime;
         } ts;
         struct
         {
             struct tcpr_ipv4_hdr idi_ip;
             /* options and then 64 bits of data */
         } ip;
-        uint32_t mask;
+        u_int32_t mask;
         int8_t data[1];
 
 #undef icmp_mask
@@ -1082,7 +1059,7 @@ struct tcpr_icmpv4_hdr
  */
 struct tcpr_igmp_hdr
 {
-    uint8_t igmp_type;       /* IGMP type */
+    u_int8_t igmp_type;       /* IGMP type */
 #ifndef IGMP_MEMBERSHIP_QUERY
 #define IGMP_MEMBERSHIP_QUERY           0x11    /* membership query */
 #endif
@@ -1095,8 +1072,8 @@ struct tcpr_igmp_hdr
 #ifndef IGMP_LEAVE_GROUP
 #define IGMP_LEAVE_GROUP                0x17    /* Leave-group message */
 #endif
-    uint8_t igmp_code;       /* IGMP code */
-    uint16_t igmp_sum;       /* IGMP checksum */
+    u_int8_t igmp_code;       /* IGMP code */
+    u_int16_t igmp_sum;       /* IGMP checksum */
     struct in_addr igmp_group;/* IGMP host IP */
 };
 
@@ -1113,15 +1090,15 @@ struct tcpr_igmp_hdr
 #endif
 struct tcpr_esp_hdr
 {
-   uint32_t esp_spi;          /* security parameter index */
-   uint32_t esp_seq;          /* ESP sequence number */
-   uint32_t esp_iv;           /* initialization vector */
+   u_int32_t esp_spi;          /* security parameter index */
+   u_int32_t esp_seq;          /* ESP sequence number */
+   u_int32_t esp_iv;           /* initialization vector */
 };
 
 struct tcpr_esp_ftr
 {
-    uint8_t esp_pad_len;     /* padding length */
-    uint8_t esp_nh;     /* next header pointer */
+    u_int8_t esp_pad_len;     /* padding length */
+    u_int8_t esp_nh;     /* next header pointer */
     int8_t *esp_auth;         /* authentication data */
 };
  
@@ -1130,12 +1107,12 @@ struct tcpr_esp_ftr
 #endif
 struct tcpr_ah_hdr
 {
-    uint8_t ah_nh;      /* next header */
-    uint8_t ah_len;          /* payload length */
-    uint16_t ah_res;         /* reserved */
-    uint32_t ah_spi;          /* security parameter index  */
-    uint32_t ah_seq;          /* AH sequence number */
-    uint32_t ah_auth;         /* authentication data */
+    u_int8_t ah_nh;      /* next header */
+    u_int8_t ah_len;          /* payload length */
+    u_int16_t ah_res;         /* reserved */
+    u_int32_t ah_spi;          /* security parameter index  */
+    u_int32_t ah_seq;          /* AH sequence number */
+    u_int32_t ah_auth;         /* authentication data */
 };
 
 
@@ -1151,20 +1128,20 @@ struct tcpr_ah_hdr
 #define TCPR_PROTO_ISL    201
 struct tcpr_isl_hdr
 {
-    uint8_t isl_dhost[5];    /* destination address "01:00:0c:00:00" */
+    u_int8_t isl_dhost[5];    /* destination address "01:00:0c:00:00" */
 #ifdef WORDS_BIGENDIAN
-    uint8_t isl_user:4,      /* user defined bits */
+    u_int8_t isl_user:4,      /* user defined bits */
     isl_type:4;      /* type of frame */
 #else
-    uint8_t isl_type:4,      /* type of frame */
+    u_int8_t isl_type:4,      /* type of frame */
     isl_user:4;      /* user defined bits */
 #endif
-    uint8_t isl_shost[6];    /* source address */
-    uint16_t isl_len;        /* total length of packet - 18 bytes */
-    uint8_t isl_snap[6];     /* 0xaaaa03 + vendor code */
-    uint16_t isl_vid;        /* 15 bit VLAN ID, 1 bit BPDU / CDP indicator */
-    uint16_t isl_index;      /* port index */
-    uint16_t isl_reserved;   /* used for FDDI and token ring */
+    u_int8_t isl_shost[6];    /* source address */
+    u_int16_t isl_len;        /* total length of packet - 18 bytes */
+    u_int8_t isl_snap[6];     /* 0xaaaa03 + vendor code */
+    u_int16_t isl_vid;        /* 15 bit VLAN ID, 1 bit BPDU / CDP indicator */
+    u_int16_t isl_index;      /* port index */
+    u_int16_t isl_reserved;   /* used for FDDI and token ring */
     /* ethernet frame and 4 byte isl crc */
 };
 
@@ -1192,7 +1169,7 @@ struct tcpr_isl_hdr
  */
 struct tcpr_mpls_hdr
 {
-    uint32_t mpls_les;          /* 20 bits label, 3 bits exp, 1 bit bos, ttl */
+    u_int32_t mpls_les;          /* 20 bits label, 3 bits exp, 1 bit bos, ttl */
 #define TCPR_MPLS_BOS_ON    1
 #define TCPR_MPLS_BOS_OFF   0
 };
@@ -1204,20 +1181,20 @@ struct tcpr_mpls_hdr
  */
 struct tcpr_ntp_hdr_l_fp  /* int32_t floating point (64-bit) */
 {
-    uint32_t integer;         /* integer */
-    uint32_t fraction;        /* fraction */
+    u_int32_t integer;         /* integer */
+    u_int32_t fraction;        /* fraction */
 };
 
 struct tcpr_ntp_hdr_s_fp  /* int16_t floating point (32-bit) */
 {
-    uint16_t integer;        /* integer */
-    uint16_t fraction;       /* fraction */
+    u_int16_t integer;        /* integer */
+    u_int16_t fraction;       /* fraction */
 };
 
 
 struct tcpr_ntp_hdr
 {
-    uint8_t ntp_li_vn_mode;              /* leap indicator, version, mode */
+    u_int8_t ntp_li_vn_mode;              /* leap indicator, version, mode */
 #define TCPR_NTP_LI_NW    0x0         /* no warning */
 #define TCPR_NTP_LI_AS    0x1         /* last minute has 61 seconds */
 #define TCPR_NTP_LI_DS    0x2         /* last minute has 59 seconds */
@@ -1235,16 +1212,16 @@ struct tcpr_ntp_hdr
 #define TCPR_NTP_MODE_B   0x5         /* broadcast */
 #define TCPR_NTP_MODE_RC  0x6         /* reserved for NTP control message */
 #define TCPR_NTP_MODE_RP  0x7         /* reserved for private use */
-    uint8_t ntp_stratum;                 /* stratum */
+    u_int8_t ntp_stratum;                 /* stratum */
 #define TCPR_NTP_STRATUM_UNAVAIL  0x0 /* unspecified or unavailable */
 #define TCPR_NTP_STRATUM_PRIMARY  0x1 /* primary reference (radio clock) */
                                         /* 2 - 15 is secondary */
                                         /* 16 - 255 is reserved */
-    uint8_t ntp_poll;                    /* poll interval (should be 4 - 12) */
-    uint8_t ntp_precision;               /* local clock precision */
+    u_int8_t ntp_poll;                    /* poll interval (should be 4 - 12) */
+    u_int8_t ntp_precision;               /* local clock precision */
     struct tcpr_ntp_hdr_s_fp ntp_delay;       /* roundtrip delay */
     struct tcpr_ntp_hdr_s_fp ntp_dispersion;  /* nominal error */
-    uint32_t ntp_reference_id;                /* reference source id */
+    u_int32_t ntp_reference_id;                /* reference source id */
 #define TCPR_NTP_REF_LOCAL    0x4c4f434c  /* uncalibrated local clock */
 #define TCPR_NTP_REF_PPS      0x50505300  /* atomic / pulse-per-second clock */
 #define TCPR_NTP_REF_ACTS     0x41435453  /* NIST dialup modem */
@@ -1275,20 +1252,20 @@ struct tcpr_ntp_hdr
  */
 struct tcpr_ospf_hdr
 {
-    uint8_t ospf_v;          /* version */
+    u_int8_t ospf_v;          /* version */
 #define OSPFVERSION         2
-    uint8_t ospf_type;       /* type */
+    u_int8_t ospf_type;       /* type */
 #define  TCPR_OSPF_UMD    0   /* UMd monitoring packet */
 #define  TCPR_OSPF_HELLO  1   /* HELLO packet */
 #define  TCPR_OSPF_DBD    2   /* dataBase description packet */
 #define  TCPR_OSPF_LSR    3   /* link state request packet */
 #define  TCPR_OSPF_LSU    4   /* link state Update Packet */
 #define  TCPR_OSPF_LSA    5   /* link state acknowledgement packet */
-    uint16_t   ospf_len;     /* length */
+    u_int16_t   ospf_len;     /* length */
     struct in_addr ospf_rtr_id; /* source router ID */
     struct in_addr ospf_area_id;/* roam ID */
-    uint16_t ospf_sum;         /* checksum */
-    uint16_t ospf_auth_type;     /* authentication type */
+    u_int16_t ospf_sum;         /* checksum */
+    u_int16_t ospf_auth_type;     /* authentication type */
 #define TCPR_OSPF_AUTH_NULL   0   /* null password */
 #define TCPR_OSPF_AUTH_SIMPLE 1   /* simple, plaintext, 8 int8_t password */
 #define TCPR_OSPF_AUTH_MD5    2   /* MD5 */
@@ -1302,10 +1279,10 @@ struct tcpr_ospf_hdr
  */
 struct tcpr_auth_hdr
 {
-    uint16_t ospf_auth_null; /* NULL */
-    uint8_t ospf_auth_keyid; /* authentication key ID */
-    uint8_t ospf_auth_len;   /* auth data length */
-    uint32_t ospf_auth_seq;    /* cryptographic sequence number */
+    u_int16_t ospf_auth_null; /* NULL */
+    u_int8_t ospf_auth_keyid; /* authentication key ID */
+    u_int8_t ospf_auth_len;   /* auth data length */
+    u_int ospf_auth_seq;    /* cryptographic sequence number */
 };
 
 
@@ -1317,10 +1294,10 @@ struct tcpr_auth_hdr
 struct tcpr_ospf_hello_hdr
 {
     struct in_addr hello_nmask; /* netmask associated with the interface */
-    uint16_t hello_intrvl;       /* num of seconds between routers last packet */
-    uint8_t hello_opts;          /* Options for HELLO packets (look above) */
-    uint8_t hello_rtr_pri;       /* router's priority (if 0, can't be backup) */
-    uint32_t hello_dead_intvl;     /* # of secs a router is silent till deemed down */
+    u_int16_t hello_intrvl;       /* num of seconds between routers last packet */
+    u_int8_t hello_opts;          /* Options for HELLO packets (look above) */
+    u_int8_t hello_rtr_pri;       /* router's priority (if 0, can't be backup) */
+    u_int hello_dead_intvl;     /* # of secs a router is silent till deemed down */
     struct in_addr hello_des_rtr;   /* Designated router on the network */
     struct in_addr hello_bkup_rtr;  /* Backup router */
     struct in_addr hello_nbr;       /* neighbor router, memcpy more as needed */
@@ -1332,13 +1309,13 @@ struct tcpr_ospf_hello_hdr
  */
 struct tcpr_dbd_hdr
 {
-    uint16_t dbd_mtu_len;    /* max length of IP dgram that this 'if' can use */
-    uint8_t dbd_opts;        /* DBD packet options (from above) */
-    uint8_t dbd_type;        /* type of exchange occurring */
+    u_int16_t dbd_mtu_len;    /* max length of IP dgram that this 'if' can use */
+    u_int8_t dbd_opts;        /* DBD packet options (from above) */
+    u_int8_t dbd_type;        /* type of exchange occurring */
 #define TCPR_DBD_IBI      0x01    /* init */
 #define TCPR_DBD_MBIT     0x02    /* more DBD packets are to come */
 #define TCPR_DBD_MSBIT    0x04    /* If 1, sender is the master in the exchange */
-    uint32_t dbd_seq;         /* DBD sequence number */
+    u_int  dbd_seq;         /* DBD sequence number */
 };
 
 
@@ -1357,8 +1334,8 @@ struct tcpr_dbd_hdr
  */
 struct tcpr_lsr_hdr
 {
-    uint32_t lsr_type;             /* type of LS being requested */
-    uint32_t lsr_lsid;             /* link state ID */
+    u_int lsr_type;             /* type of LS being requested */
+    u_int lsr_lsid;             /* link state ID */
     struct in_addr lsr_adrtr;   /* advertising router (memcpy more as needed) */
 };
 
@@ -1368,7 +1345,7 @@ struct tcpr_lsr_hdr
  */
 struct tcpr_lsu_hdr
 {
-    uint32_t lsu_num;              /* number of LSAs that will be broadcasted */
+    u_int lsu_num;              /* number of LSAs that will be broadcasted */
 };
 
 
@@ -1377,14 +1354,14 @@ struct tcpr_lsu_hdr
  */
 struct tcpr_lsa_hdr
 {
-    uint16_t lsa_age;        /* time in seconds since the LSA was originated */
-    uint8_t lsa_opts;        /* look above for OPTS_* */
-    uint8_t lsa_type;        /* look below for LS_TYPE_* */
-    uint32_t lsa_id;           /* link State ID */
+    u_int16_t lsa_age;        /* time in seconds since the LSA was originated */
+    u_int8_t lsa_opts;        /* look above for OPTS_* */
+    u_int8_t lsa_type;        /* look below for LS_TYPE_* */
+    u_int lsa_id;           /* link State ID */
     struct in_addr lsa_adv; /* router ID of Advertising router */
-    uint32_t lsa_seq;          /* LSA sequence number to detect old/bad ones */
-    uint16_t lsa_sum;      /* "Fletcher Checksum" of all fields minus age */
-    uint16_t lsa_len;        /* length in bytes including the 20 byte header */
+    u_int lsa_seq;          /* LSA sequence number to detect old/bad ones */
+    u_int16_t lsa_sum;      /* "Fletcher Checksum" of all fields minus age */
+    u_int16_t lsa_len;        /* length in bytes including the 20 byte header */
 };
 
 
@@ -1396,23 +1373,23 @@ struct tcpr_lsa_hdr
  */
 struct tcpr_rtr_lsa_hdr
 {
-    uint16_t rtr_flags;      /* set to help describe packet */
+    u_int16_t rtr_flags;      /* set to help describe packet */
 #define TCPR_RTR_FLAGS_W  0x0100  /* W bit */
 #define TCPR_RTR_FLAGS_E  0x0200  /* E bit */
 #define TCPR_RTR_FLAGS_B  0x0400  /* B bit */
-    uint16_t rtr_num;        /* number of links within that packet */
-    uint32_t rtr_link_id;      /* describes link_data (look below) */
+    u_int16_t rtr_num;        /* number of links within that packet */
+    u_int rtr_link_id;      /* describes link_data (look below) */
 #define TCPR_LINK_ID_NBR_ID   1   /* Neighbors router ID, also can be 4 */
 #define TCPR_LINK_ID_IP_DES   2   /* IP address of designated router */
 #define TCPR_LINK_ID_SUB      3   /* IP subnet number */
-    uint32_t rtr_link_data;    /* Depending on link_id, info is here */
-    uint8_t rtr_type;        /* Description of router link */
+    u_int rtr_link_data;    /* Depending on link_id, info is here */
+    u_int8_t rtr_type;        /* Description of router link */
 #define TCPR_RTR_TYPE_PTP     1   /* Point-To-Point */
 #define TCPR_RTR_TYPE_TRANS   2   /* Connection to a "transit network" */
 #define TCPR_RTR_TYPE_STUB    3   /* Connectin to a "stub network" */
 #define RTR_TYPE_VRTL   4   /* connects to a "virtual link" */
-    uint8_t rtr_tos_num;     /* number of different TOS metrics for this link */
-    uint16_t rtr_metric;     /* the "cost" of using this link */
+    u_int8_t rtr_tos_num;     /* number of different TOS metrics for this link */
+    u_int16_t rtr_metric;     /* the "cost" of using this link */
 };
 
 
@@ -1422,7 +1399,7 @@ struct tcpr_rtr_lsa_hdr
 struct tcpr_net_lsa_hdr
 {
     struct in_addr net_nmask;   /* Netmask for that network */
-    uint32_t  net_rtr_id;          /* ID of router attached to that network */
+    u_int  net_rtr_id;          /* ID of router attached to that network */
 };
  
  
@@ -1432,8 +1409,8 @@ struct tcpr_net_lsa_hdr
 struct tcpr_sum_lsa_hdr
 {
     struct in_addr sum_nmask;   /* Netmask of destination IP address */
-    uint32_t sum_metric;          /* Same as in rtr_lsa (&0xfff to use last 24bit */
-    uint32_t sum_tos_metric;      /* first 8bits are TOS, 24bits are TOS Metric */
+    u_int  sum_metric;          /* Same as in rtr_lsa (&0xfff to use last 24bit */
+    u_int  sum_tos_metric;      /* first 8bits are TOS, 24bits are TOS Metric */
 };
  
  
@@ -1444,10 +1421,10 @@ struct tcpr_sum_lsa_hdr
 struct tcpr_as_lsa_hdr
 {
     struct in_addr as_nmask;    /* Netmask for advertised destination */
-    uint32_t as_metric;           /* May have to set E bit in first 8bits */
+    u_int  as_metric;           /* May have to set E bit in first 8bits */
 #define TCPR_AS_E_BIT_ON 0x80000000  /* as_metric */
     struct in_addr as_fwd_addr; /* Forwarding address */
-    uint32_t as_rte_tag;          /* External route tag */
+    u_int  as_rte_tag;          /* External route tag */
 };
 
 
@@ -1458,7 +1435,7 @@ struct tcpr_as_lsa_hdr
  */
 struct tcpr_rip_hdr
 {
-    uint8_t rip_cmd;         /* RIP command */
+    u_int8_t rip_cmd;         /* RIP command */
 #define RIPCMD_REQUEST   1  /* want info */
 #define RIPCMD_RESPONSE  2  /* responding to request */
 #define RIPCMD_TRACEON   3  /* turn tracing on */
@@ -1466,17 +1443,17 @@ struct tcpr_rip_hdr
 #define RIPCMD_POLL      5  /* like request, but anyone answers */
 #define RIPCMD_POLLENTRY 6  /* like poll, but for entire entry */
 #define RIPCMD_MAX       7  /* ? command */
-    uint8_t rip_ver;         /* RIP version */
+    u_int8_t rip_ver;         /* RIP version */
 #define RIPVER_0         0
 #define RIPVER_1         1
 #define RIPVER_2         2
-    uint16_t rip_rd;         /* Zero (v1) or Routing Domain (v2) */
-    uint16_t rip_af;         /* Address family */
-    uint16_t rip_rt;         /* Zero (v1) or Route Tag (v2) */
-    uint32_t rip_addr;        /* IP address */
-    uint32_t rip_mask;        /* Zero (v1) or Subnet Mask (v2) */
-    uint32_t rip_next_hop;    /* Zero (v1) or Next hop IP address (v2) */
-    uint32_t rip_metric;      /* Metric */
+    u_int16_t rip_rd;         /* Zero (v1) or Routing Domain (v2) */
+    u_int16_t rip_af;         /* Address family */
+    u_int16_t rip_rt;         /* Zero (v1) or Route Tag (v2) */
+    u_int32_t rip_addr;        /* IP address */
+    u_int32_t rip_mask;        /* Zero (v1) or Subnet Mask (v2) */
+    u_int32_t rip_next_hop;    /* Zero (v1) or Next hop IP address (v2) */
+    u_int32_t rip_metric;      /* Metric */
 };
 
 /*
@@ -1511,33 +1488,33 @@ struct tcpr_rip_hdr
 
 struct tcpr_rpc_opaque_auth
 {
-    uint32_t rpc_auth_flavor;
-    uint32_t rpc_auth_length;
+    u_int32_t rpc_auth_flavor;
+    u_int32_t rpc_auth_length;
 #if 0
-    uint8_t *rpc_auth_data;
+    u_int8_t *rpc_auth_data;
 #endif
 };
 
 struct tcpr_rpc_call
 {
-    uint32_t rpc_rpcvers;   /* RPC version - must be 2 */
-    uint32_t rpc_prognum;   /* Program Number */
-    uint32_t rpc_vers;      /* Program Version */
-    uint32_t rpc_procedure; /* RPC procedure */
+    u_int32_t rpc_rpcvers;   /* RPC version - must be 2 */
+    u_int32_t rpc_prognum;   /* Program Number */
+    u_int32_t rpc_vers;      /* Program Version */
+    u_int32_t rpc_procedure; /* RPC procedure */
     struct tcpr_rpc_opaque_auth rpc_credentials;
     struct tcpr_rpc_opaque_auth rpc_verifier;
 };
 
 struct tcpr_rpc_call_hdr
 {
-    uint32_t rpc_xid;  /* xid (transaction identifier) */
-    uint32_t rpc_type;
+    u_int32_t rpc_xid;  /* xid (transaction identifier) */
+    u_int32_t rpc_type;
     struct tcpr_rpc_call  rpc_call;
 };
 
 struct tcpr_rpc_call_tcp_hdr
 {
-    uint32_t rpc_record_marking; /* used with byte stream protocols */
+    u_int32_t rpc_record_marking; /* used with byte stream protocols */
     struct tcpr_rpc_call_hdr rpc_common;
 };
 
@@ -1548,18 +1525,18 @@ struct tcpr_rpc_call_tcp_hdr
  */
 struct tcpr_stp_conf_hdr
 {
-    uint16_t stp_id;         /* protocol id */
-    uint8_t stp_version;     /* protocol version */
-    uint8_t stp_bpdu_type;   /* bridge protocol data unit type */
-    uint8_t stp_flags;       /* control flags */
-    uint8_t stp_rootid[8];   /* root id */
-    uint32_t stp_rootpc;      /* root path cost */
-    uint8_t stp_bridgeid[8]; /* bridge id */
-    uint16_t stp_portid;     /* port id */
-    uint16_t stp_mage;       /* message age */
-    uint16_t stp_maxage;     /* max age */
-    uint16_t stp_hellot;     /* hello time */
-    uint16_t stp_fdelay;     /* forward delay */
+    u_int16_t stp_id;         /* protocol id */
+    u_int8_t stp_version;     /* protocol version */
+    u_int8_t stp_bpdu_type;   /* bridge protocol data unit type */
+    u_int8_t stp_flags;       /* control flags */
+    u_int8_t stp_rootid[8];   /* root id */
+    u_int32_t stp_rootpc;      /* root path cost */
+    u_int8_t stp_bridgeid[8]; /* bridge id */
+    u_int16_t stp_portid;     /* port id */
+    u_int16_t stp_mage;       /* message age */
+    u_int16_t stp_maxage;     /* max age */
+    u_int16_t stp_hellot;     /* hello time */
+    u_int16_t stp_fdelay;     /* forward delay */
 };
 
 
@@ -1570,9 +1547,9 @@ struct tcpr_stp_conf_hdr
  */
 struct tcpr_stp_tcn_hdr
 {
-    uint16_t stp_id;         /* protocol id */
-    uint8_t stp_version;     /* protocol version */
-    uint8_t stp_bpdu_type;   /* bridge protocol data unit type */
+    u_int16_t stp_id;         /* protocol id */
+    u_int8_t stp_version;     /* protocol version */
+    u_int8_t stp_bpdu_type;   /* bridge protocol data unit type */
 };
 
 
@@ -1583,19 +1560,19 @@ struct tcpr_stp_tcn_hdr
  */
 struct tcpr_tcp_hdr
 {
-    uint16_t th_sport;       /* source port */
-    uint16_t th_dport;       /* destination port */
-    uint32_t th_seq;          /* sequence number */
-    uint32_t th_ack;          /* acknowledgement number */
+    u_int16_t th_sport;       /* source port */
+    u_int16_t th_dport;       /* destination port */
+    u_int32_t th_seq;          /* sequence number */
+    u_int32_t th_ack;          /* acknowledgement number */
 #ifdef WORDS_BIGENDIAN
-    uint8_t th_off:4,        /* data offset */
+    u_int8_t th_off:4,        /* data offset */
     th_x2:4;         /* (unused) */
 #else
-    uint8_t th_x2:4,         /* (unused) */
+    u_int8_t th_x2:4,         /* (unused) */
     th_off:4;        /* data offset */
 #endif
 
-    uint8_t  th_flags;       /* control flags */
+    u_int8_t  th_flags;       /* control flags */
 #ifndef TH_FIN
 #define TH_FIN    0x01      /* finished send data */
 #endif
@@ -1620,9 +1597,9 @@ struct tcpr_tcp_hdr
 #ifndef TH_CWR   
 #define TH_CWR    0x80
 #endif
-    uint16_t th_win;         /* window */
-    uint16_t th_sum;         /* checksum */
-    uint16_t th_urp;         /* urgent pointer */
+    u_int16_t th_win;         /* window */
+    u_int16_t th_sum;         /* checksum */
+    u_int16_t th_urp;         /* urgent pointer */
 };
 
 
@@ -1631,17 +1608,17 @@ struct tcpr_tcp_hdr
  */
 struct tcpr_token_ring_hdr
 {
-    uint8_t  token_ring_access_control;
+    u_int8_t  token_ring_access_control;
 #define TCPR_TOKEN_RING_FRAME  0x10
-    uint8_t  token_ring_frame_control;
+    u_int8_t  token_ring_frame_control;
 #define TCPR_TOKEN_RING_LLC_FRAME  0x40
-    uint8_t  token_ring_dhost[TOKEN_RING_ADDR_LEN];
-    uint8_t  token_ring_shost[TOKEN_RING_ADDR_LEN];
-    uint8_t  token_ring_llc_dsap;
-    uint8_t  token_ring_llc_ssap;
-    uint8_t  token_ring_llc_control_field;
-    uint8_t  token_ring_llc_org_code[TCPR_ORG_CODE_SIZE];
-    uint16_t token_ring_type;
+    u_int8_t  token_ring_dhost[TOKEN_RING_ADDR_LEN];
+    u_int8_t  token_ring_shost[TOKEN_RING_ADDR_LEN];
+    u_int8_t  token_ring_llc_dsap;
+    u_int8_t  token_ring_llc_ssap;
+    u_int8_t  token_ring_llc_control_field;
+    u_int8_t  token_ring_llc_org_code[TCPR_ORG_CODE_SIZE];
+    u_int16_t token_ring_type;
 #define TOKEN_RING_TYPE_IP            0x0800  /* IP protocol */
 #define TOKEN_RING_TYPE_ARP           0x0806  /* addr. resolution protocol */
 #define TOKEN_RING_TYPE_REVARP        0x8035  /* reverse addr. resolution protocol */
@@ -1649,7 +1626,7 @@ struct tcpr_token_ring_hdr
 
 struct tcpr_token_ring_addr
 {
-    uint8_t  token_ring_addr_octet[6];        /* Token Ring address */
+    u_int8_t  token_ring_addr_octet[6];        /* Token Ring address */
 };
 
 /*
@@ -1659,10 +1636,10 @@ struct tcpr_token_ring_addr
  */
 struct tcpr_udp_hdr
 {
-    uint16_t uh_sport;       /* soure port */
-    uint16_t uh_dport;       /* destination port */
-    uint16_t uh_ulen;        /* length */
-    uint16_t uh_sum;         /* checksum */
+    u_int16_t uh_sport;       /* soure port */
+    u_int16_t uh_dport;       /* destination port */
+    u_int16_t uh_ulen;        /* length */
+    u_int16_t uh_sum;         /* checksum */
 };
 
 /*
@@ -1671,21 +1648,21 @@ struct tcpr_udp_hdr
  */
 struct tcpr_sebek_hdr
 {
-    uint32_t magic;           /* identify packets that should be hidden */
-    uint16_t version;         /* protocol version, currently 1 */
+    u_int32_t magic;           /* identify packets that should be hidden */
+    u_int16_t version;         /* protocol version, currently 1 */
 #define SEBEK_PROTO_VERSION 1
-    uint16_t type;            /* type of record (read data is type 0, write data is type 1) */
+    u_int16_t type;            /* type of record (read data is type 0, write data is type 1) */
 #define SEBEK_TYPE_READ     0  /* Currently, only read is supported */
 #define SEBEK_TYPE_WRITE    1
-    uint32_t counter;         /*  PDU counter used to identify when packet are lost */
-    uint32_t time_sec;        /* seconds since EPOCH according to the honeypot */
-    uint32_t time_usec;       /* residual microseconds */
-    uint32_t pid;             /* PID */
-    uint32_t uid;             /* UID */
-    uint32_t fd;              /* FD */
+    u_int32_t counter;         /*  PDU counter used to identify when packet are lost */
+    u_int32_t time_sec;        /* seconds since EPOCH according to the honeypot */
+    u_int32_t time_usec;       /* residual microseconds */
+    u_int32_t pid;             /* PID */
+    u_int32_t uid;             /* UID */
+    u_int32_t fd;              /* FD */
 #define SEBEK_CMD_LENGTH   12
-    uint8_t cmd[SEBEK_CMD_LENGTH]; /* 12 first characters of the command */
-    uint32_t length;          /* length in bytes of the PDU's body */
+    u_int8_t cmd[SEBEK_CMD_LENGTH]; /* 12 first characters of the command */
+    u_int32_t length;          /* length in bytes of the PDU's body */
 };
 
 
@@ -1700,24 +1677,24 @@ struct tcpr_sebek_hdr
 struct tcpr_vrrp_hdr
 {
 #ifdef WORDS_BIGENDIAN
-    uint8_t vrrp_t:4,        /* packet type */
+    u_int8_t vrrp_t:4,        /* packet type */
     vrrp_v:4;        /* protocol version */
 #else
-    uint8_t vrrp_v:4,        /* protocol version */
+    u_int8_t vrrp_v:4,        /* protocol version */
     vrrp_t:4;        /* packet type */
 #endif
 #define TCPR_VRRP_VERSION_01  0x1
 #define TCPR_VRRP_VERSION_02  0x2
 #define TCPR_VRRP_TYPE_ADVERT 0x1
-    uint8_t vrrp_vrouter_id; /* virtual router id */
-    uint8_t vrrp_priority;   /* priority */
-    uint8_t vrrp_ip_count;   /* number of IP addresses */
-    uint8_t vrrp_auth_type;  /* authorization type */
+    u_int8_t vrrp_vrouter_id; /* virtual router id */
+    u_int8_t vrrp_priority;   /* priority */
+    u_int8_t vrrp_ip_count;   /* number of IP addresses */
+    u_int8_t vrrp_auth_type;  /* authorization type */
 #define TCPR_VRRP_AUTH_NONE   0x1
 #define TCPR_VRRP_AUTH_PASSWD 0x2
 #define TCPR_VRRP_AUTH_IPAH   0x3
-    uint8_t vrrp_advert_int; /* advertisement interval */
-    uint16_t vrrp_sum;       /* checksum */
+    u_int8_t vrrp_advert_int; /* advertisement interval */
+    u_int16_t vrrp_sum;       /* checksum */
     /* additional addresses */
     /* authentication info */
 };
@@ -1730,26 +1707,26 @@ struct tcpr_vrrp_hdr
 struct tcpr_hsrp_hdr
 {
 #define TCPR_HSRP_VERSION 0x0
-    uint8_t version;           /* Version of the HSRP messages */
+    u_int8_t version;           /* Version of the HSRP messages */
 #define TCPR_HSRP_TYPE_HELLO 0x0
 #define TCPR_HSRP_TYPE_COUP 0x1
 #define TCPR_HSRP_TYPE_RESIGN 0x2
-    uint8_t opcode;            /* Type of message */
+    u_int8_t opcode;            /* Type of message */
 #define TCPR_HSRP_STATE_INITIAL 0x0
 #define TCPR_HSRP_STATE_LEARN   0x1
 #define TCPR_HSRP_STATE_LISTEN  0x2
 #define TCPR_HSRP_STATE_SPEAK   0x4
 #define TCPR_HSRP_STATE_STANDBY 0x8
 #define TCPR_HSRP_STATE_ACTIVE  0x10
-    uint8_t state;            /* Current state of the router */
-    uint8_t hello_time;       /* Period in seconds between hello messages */
-    uint8_t hold_time;        /* Seconds that the current hello message is valid */
-    uint8_t priority;         /* Priority for the election proccess */
-    uint8_t group;            /* Standby group */
-    uint8_t reserved;         /* Reserved field */
+    u_int8_t state;            /* Current state of the router */
+    u_int8_t hello_time;       /* Period in seconds between hello messages */
+    u_int8_t hold_time;        /* Seconds that the current hello message is valid */
+    u_int8_t priority;         /* Priority for the election proccess */
+    u_int8_t group;            /* Standby group */
+    u_int8_t reserved;         /* Reserved field */
 #define HSRP_AUTHDATA_LENGTH  8 
-    uint8_t authdata[HSRP_AUTHDATA_LENGTH]; /* Password */
-    uint32_t virtual_ip;      /* Virtual IP address */
+    u_int8_t authdata[HSRP_AUTHDATA_LENGTH]; /* Password */
+    u_int32_t virtual_ip;      /* Virtual IP address */
 };
 
 #endif

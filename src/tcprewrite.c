@@ -1,22 +1,35 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2004-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+ 
 /*
  * Purpose: Modify packets in a pcap file based on rules provided by the
  * user to offload work from tcpreplay and provide a easier means of 
@@ -83,12 +96,13 @@ main(int argc, char *argv[])
     }
 
     /* parse the tcpedit args */
-    rcode = tcpedit_post_args(tcpedit);
+    rcode = tcpedit_post_args(&tcpedit);
     if (rcode < 0) {
         errx(-1, "Unable to parse args: %s", tcpedit_geterr(tcpedit));
     } else if (rcode == 1) {
         warnx("%s", tcpedit_geterr(tcpedit));
     }
+
 
     if (tcpedit_validate(tcpedit) < 0) {
         errx(-1, "Unable to edit packets given options:\n%s",
@@ -151,7 +165,7 @@ tcprewrite_init(void)
     /* clear out tcpdump struct */
     memset(&tcpdump, '\0', sizeof(tcpdump_t));
 #endif
-    
+
     if (fcntl(STDERR_FILENO, F_SETFL, O_NONBLOCK) < 0)
         warnx("Unable to set STDERR to non-blocking: %s", strerror(errno));
 }
@@ -226,15 +240,15 @@ rewrite_packets(tcpedit_t *tcpedit, pcap_t *pin, pcap_dumper_t *pout)
     static u_char *pktdata_buff;
     static char *frag = NULL;
     COUNTER packetnum = 0;
-    int rcode, frag_len, i;
-    
+    int rcode, frag_len, i, proto;
+
     pkthdr_ptr = &pkthdr;
 
     if (pktdata_buff == NULL)
         pktdata_buff = (u_char *)safe_malloc(MAXPACKET);
-        
+
     pktdata = &pktdata_buff;
-    
+
     if (frag == NULL)
         frag = (char *)safe_malloc(MAXPACKET);
 
@@ -251,7 +265,7 @@ rewrite_packets(tcpedit_t *tcpedit, pcap_t *pin, pcap_dumper_t *pout)
          * because pcap_next() returns a const ptr
          */
         memcpy(*pktdata, pktconst, pkthdr.caplen);
-        
+
 #ifdef ENABLE_VERBOSE
         if (options.verbose)
             tcpdump_print(&tcpdump, pkthdr_ptr, *pktdata);
@@ -286,10 +300,14 @@ WRITE_PACKET:
             /* write the packet when there's no fragrouting to be done */
             pcap_dump((u_char *)pout, pkthdr_ptr, *pktdata);
         } else {
-            /* packet needs to be fragmented */
-            if ((options.fragroute_dir == FRAGROUTE_DIR_BOTH) ||
-                    (cache_result == TCPR_DIR_C2S && options.fragroute_dir == FRAGROUTE_DIR_C2S) ||
-                    (cache_result == TCPR_DIR_S2C && options.fragroute_dir == FRAGROUTE_DIR_S2C)) {
+            /* get the L3 protocol of the packet */
+            proto = tcpedit_l3proto(tcpedit, AFTER_PROCESS, *pktdata, pkthdr_ptr->caplen);
+
+            /* packet is IPv4/IPv6 AND needs to be fragmented */
+            if ((proto ==  ETHERTYPE_IP || proto == ETHERTYPE_IP6) &&
+                ((options.fragroute_dir == FRAGROUTE_DIR_BOTH) ||
+                 (cache_result == TCPR_DIR_C2S && options.fragroute_dir == FRAGROUTE_DIR_C2S) ||
+                 (cache_result == TCPR_DIR_S2C && options.fragroute_dir == FRAGROUTE_DIR_S2C))) {
 
                 if (fragroute_process(options.frag_ctx, *pktdata, pkthdr_ptr->caplen) < 0)
                     errx(-1, "Error processing packet via fragroute: %s", options.frag_ctx->errbuf);
@@ -314,7 +332,7 @@ WRITE_PACKET:
 #endif
     } /* while() */
     return 0;
-}   
+}
 
 
 /*

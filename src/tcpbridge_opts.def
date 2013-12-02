@@ -1,33 +1,12 @@
-/* $Id$ */
-
-/*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
- *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
- *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
- */
-
-
 autogen definitions options;
 
 
 copyright = {
-    date        = "2000-2010";
+    date        = "2000-2012";
     owner       = "Aaron Turner";
-    type        = GPL;
-    eaddr       = "tcpreplay-users@lists.sourceforge.net";
+    type        = "bsd";
     author      = <<- EOText
-Copyright 2000-2010 Aaron Turner
+Copyright 2000-2012 Aaron Turner
 
 For support please use the tcpreplay-users@lists.sourceforge.net mailing list.
 
@@ -88,7 +67,7 @@ Restart tcpbridge
 @end enumerate
 
 .SH "SEE ALSO"
-tcpdump(1), tcpprep(1), tcprewrite(1), tcpreplay(1), tcpcapinfo(1)
+tcpdump(1), tcpprep(1), tcprewrite(1), tcpreplay(1)
 
 .SH "BUGS"
 tcpbridge can only send packets as fast as your computer's interface,
@@ -313,7 +292,7 @@ flag = {
     descrip     = "Print the PID of tcpbridge at startup";
     flag-code   = <<- EOPid
 
-    fprintf(stderr, "PID: %d\n", getpid());
+    fprintf(stderr, "PID: %hu\n", getpid());
 
 EOPid;
     doc         = "";
@@ -358,13 +337,12 @@ flag = {
     descrip     = "Print version information";
     flag-code   = <<- EOVersion
 
-    fprintf(stderr, "tcpbridge version: %s (build %s)", VERSION, git_version());
+    fprintf(stderr, "tcpbridge version: %s (build %s)", VERSION, svn_version());
 #ifdef DEBUG
     fprintf(stderr, " (debug)");
 #endif
     fprintf(stderr, "\n");
-    fprintf(stderr, "Copyright 2000-2010 by Aaron Turner <aturner at synfin dot net>\n");
-    fprintf(stderr, "The entire Tcpreplay Suite is licensed under the GPLv3\n");
+    fprintf(stderr, "Copyright 2000-2012 by Aaron Turner <aturner at synfin dot net>\n");
 #ifdef HAVE_LIBDNET
     fprintf(stderr, "Compiled against libdnet: %s\n", LIBDNET_VERSION);
 #else
@@ -385,7 +363,7 @@ flag = {
 #else
     fprintf(stderr, "Verbose printing via tcpdump: disabled\n");
 #endif
-    fprintf(stderr, "Injection method: %s\n", sendpacket_get_method());
+    fprintf(stderr, "Injection method: %s\n", sendpacket_get_method(NULL));
 
     exit(0);
 

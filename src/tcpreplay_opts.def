@@ -1,32 +1,14 @@
-/* $Id$ */
-
-/*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
- *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
- *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 autogen definitions options;
 
 
 copyright = {
-    date        = "2000-2010";
+    date        = "2000-2012";
     owner       = "Aaron Turner";
-    type        = GPL;
+    type        = bsd;
     eaddr       = "tcpreplay-users@lists.sourceforge.net";
     author      = <<- EOText
-Copyright 2000-2010 Aaron Turner
+Copyright 2000-2012 Aaron Turner
+Copyright 2013 Fred Klassen - AppNeta Inc.
 
 For support please use the tcpreplay-users@lists.sourceforge.net mailing list.
 
@@ -36,11 +18,7 @@ EOText;
 };
 
 package         = "tcpreplay";
-#ifdef TCPREPLAY_EDIT
-prog-name       = "tcpreplay-edit";
-#else 
 prog-name       = "tcpreplay";
-#endif
 prog-title      = "Replay network traffic stored in pcap files";
 long-opts;
 gnu-usage;
@@ -58,7 +36,8 @@ include         = "#include \"defines.h\"\n"
                 "#include \"config.h\"\n"
                 "#include <stdlib.h>\n"
                 "#include <sys/types.h>\n"
-                "#include <unistd.h>\n";
+                "#include <unistd.h>\n"
+                "extern tcpreplay_opt_t options;\n";
 
 homerc          = "$$/";
 
@@ -95,7 +74,7 @@ Restart tcpreplay
 @end enumerate
 
 .SH "SEE ALSO"
-tcpdump(1), tcpbridge(1), tcprewrite(1), tcpprep(1), tcpcapinfo(1)
+tcpreplay-edit(1), tcpdump(1), tcpprep(1), tcprewrite(1), libnet(3)
 
 .SH "BUGS"
 tcpreplay can only send packets as fast as your computer's interface,
@@ -134,17 +113,17 @@ flag = {
     name        = quiet;
     value       = q;
     descrip     = "Quiet mode";
-    doc         = "Print nothing except the statistics at the end of the run";
+    doc	        = "Print nothing except the statistics at the end of the run";
 };
 
 flag = {
     name        = timer;
     value       = T;
     arg-default = "gtod";
-    max         = 1;
+    max	        = 1;
     arg-type    = string;
     descrip     = "Select packet timing mode: select, ioport, rdtsc, gtod, nano, abstime";
-    doc         = <<- EOText
+    doc	        = <<- EOText
 Allows you to select the packet timing method to use:
 @enumerate
 @item nano
@@ -173,6 +152,32 @@ flag = {
 Reduce the amount of time we would normally sleep between two packets by the 
 specified number of usec.  This provides a "fuzz factor" to compensate for
 running on a non-RTOS and other processes using CPU time.  Default is disabled.
+EOText;
+};
+
+flag = {
+    name        = sleepmode;
+    arg-type    = string;
+    arg-default = "current";
+    max         = 1;
+    descrip     = "Select the sleep mode: current | ver325";
+    doc         = <<- EOText
+Select the algoritim used for sleeping between packets.  Valid options are
+"current" and "ver325".  Current tends to be best for very high speeds, while
+the older ver325 mode works best when trying to reproduce the most accurate 
+timings which is necessary for VOIP and other time sensitive protocols.
+EOText;
+};
+
+flag = {
+    name        = maxsleep;
+    arg-type    = number;
+    arg-default = 0;
+    descrip     = "Sleep for no more then X milliseconds between packets";
+    doc         = <<- EOText
+Set a limit for the maximum number of milliseconds that tcpreplay will sleep
+between packets.  Effectively prevents long delays between packets without
+effecting the majority of packets.  Default is disabled.
 EOText;
 };
 
@@ -288,8 +293,12 @@ flag = {
     arg-type    = string;
     max         = 1;
     must-set;
-    descrip     = "Server/primary traffic output interface";
-    doc         = "";
+    descrip     = "Client to server/RX/primary traffic output interface";
+    doc         = <<- EOText
+Required network interface used to send either all traffic or traffic which is 
+marked as 'primary' via tcpprep.  Primary traffic is usually client-to-server 
+or inbound (RX) on khial virtual interfaces.
+EOText;
 };
 
 flag = {
@@ -297,8 +306,13 @@ flag = {
     value       = I;
     arg-type    = string;
     max         = 1;
-    descrip     = "Client/secondary traffic output interface";
-    doc         = "";
+    descrip     = "Server to client/TX/secondary traffic output interface";
+    doc         = <<- EOText
+Optional network interface used to send traffic which is marked as 'secondary' 
+via tcpprep.  Secondary traffic is usually server-to-client or outbound 
+(TX) on khial virtual interfaces.  Generally, it only makes sense to use this
+option with --cachefile.
+EOText;
 };
 
 
@@ -454,13 +468,29 @@ thus allowing for longer sleep times which can be more accurately implemented.
 EOText;
 };
 
+#ifdef HAVE_NETMAP
+flag = {
+    name        = netmap;
+    descrip     = "Write packets directly to netmap enabled network adapter";
+    doc         = <<- EOText
+This feature will detect netmap capable network drivers on Linux and BSD
+systems. If detected, the network driver is bypassed for the execution
+duration, and network buffers will be written to directly. This will allow
+you to achieve full line rates on commodity network adapters, similar to rates
+achieved by commercial network traffic generators. Note that bypassing the network
+driver will disrupt other applications connected through the test interface. See
+INSTALL for more information.
+EOText;
+};
+#endif
+
 flag = {
     name        = pid;
     value       = P;
     descrip     = "Print the PID of tcpreplay at startup";
     flag-code   = <<- EOPid
 
-    fprintf(stderr, "PID: %d\n", getpid());
+fprintf(stderr, "PID: %hu\n", getpid());
 
 EOPid;
     doc         = "";
@@ -483,13 +513,13 @@ flag = {
     descrip     = "Print version information";
     flag-code   = <<- EOVersion
 
-    fprintf(stderr, "tcpreplay version: %s (build %s)", VERSION, git_version());
+    fprintf(stderr, "tcpreplay version: %s (build %s)", VERSION, svn_version());
 #ifdef DEBUG
     fprintf(stderr, " (debug)");
 #endif
     fprintf(stderr, "\n");
+    fprintf(stderr, "Copyright 2013 by AppNeta Inc. - Fred Klassen <fklassen at appneta dot com>\n");
     fprintf(stderr, "Copyright 2000-2010 by Aaron Turner <aturner at synfin dot net>\n");
-    fprintf(stderr, "The entire Tcpreplay Suite is licensed under the GPLv3\n");
     fprintf(stderr, "Cache file supported: %s\n", CACHEVERSION);
 #ifdef HAVE_LIBDNET
     fprintf(stderr, "Compiled against libdnet: %s\n", LIBDNET_VERSION);
@@ -521,7 +551,12 @@ flag = {
 #else
     fprintf(stderr, "Fragroute engine: disabled\n");
 #endif
-    fprintf(stderr, "Injection method: %s\n", sendpacket_get_method());
+#ifdef HAVE_NETMAP
+    fprintf(stderr, "Default injection method: %s\n", sendpacket_get_method(NULL));
+    fprintf(stderr, "Optional injection method: netmap\n");
+#else
+    fprintf(stderr, "Injection method: %s\n", sendpacket_get_method(NULL));
+#endif
     exit(0);
 
 EOVersion;

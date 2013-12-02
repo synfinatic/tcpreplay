@@ -1,1 +1,0 @@
-file(REMOVE git_version.c)

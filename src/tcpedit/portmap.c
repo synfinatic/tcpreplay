@@ -1,20 +1,33 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2001-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /*
@@ -30,7 +43,7 @@
 #include <errno.h>
 
 #include "tcpreplay.h"
-#include "tcpedit.h"
+#include "tcpedit-int.h"
 #include "portmap.h"
 
 /**
@@ -282,7 +295,7 @@ rewrite_ports(tcpedit_t *tcpedit, u_char protocol, u_char *layer4)
     tcp_hdr_t *tcp_hdr = NULL;
     udp_hdr_t *udp_hdr = NULL;
     int changes = 0;
-    uint16_t newport;
+    u_int16_t newport;
     tcpedit_portmap_t *portmap;
 
     assert(tcpedit);
@@ -331,13 +344,11 @@ int
 rewrite_ipv4_ports(tcpedit_t *tcpedit, ipv4_hdr_t **ip_hdr)
 {
     assert(tcpedit);
-    u_char *l4;
 
     if (*ip_hdr == NULL) {
         return 0;
     } else if ((*ip_hdr)->ip_p == IPPROTO_TCP || (*ip_hdr)->ip_p == IPPROTO_UDP) {
-        l4 = get_layer4_v4(*ip_hdr, 65536);
-        return rewrite_ports(tcpedit, (*ip_hdr)->ip_p, l4);
+        return rewrite_ports(tcpedit, (*ip_hdr)->ip_p, get_layer4_v4(*ip_hdr));
     }
 
     return 0;
@@ -347,13 +358,11 @@ int
 rewrite_ipv6_ports(tcpedit_t *tcpedit, ipv6_hdr_t **ip6_hdr)
 {
     assert(tcpedit);
-    u_char *l4;
 
     if (*ip6_hdr == NULL) {
         return 0;
     } else if ((*ip6_hdr)->ip_nh == IPPROTO_TCP || (*ip6_hdr)->ip_nh == IPPROTO_UDP) {
-        l4 = get_layer4_v6(*ip6_hdr, 65535);
-        return rewrite_ports(tcpedit, (*ip6_hdr)->ip_nh, l4);
+        return rewrite_ports(tcpedit, (*ip6_hdr)->ip_nh, ((u_char*)*ip6_hdr) + TCPR_IPV6_H);
     }
     return 0;
 }

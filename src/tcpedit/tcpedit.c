@@ -1,20 +1,33 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2001-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -29,43 +42,19 @@
 #include <unistd.h>
 #include <stdarg.h>
 
+#include "tcpedit-int.h"
 #include "tcpedit_stub.h"
 #include "portmap.h"
 #include "common.h"
 #include "edit_packet.h"
 #include "parse_args.h"
+#include "plugins/dlt_plugins.h"
 
 
 #include "lib/sll.h"
 #include "dlt.h"
 
 tOptDesc *const tcpedit_tcpedit_optDesc_p;
-
-/**
- * \brief Checks to see if you should make an edit
- *
- * Given the packet direction, this lets you know if you should make an edit
- *
- * packet: C2S & editdir = client == 1
- * packet: C2S & editdir = server == 0
- * packet: S2C & editdir = client == 0
- * packet: S2C & editdir = server == 1
- * packet: S2C & editdir = both   == 1
- * packet: C2S & editdir = both   == 1
- */
-int
-tcpedit_checkdir(tcpedit_t *tcpedit, tcpr_dir_t direction)
-{
-
-    /* Should we edit this packet? */
-    if ((tcpedit->editdir == TCPEDIT_EDIT_BOTH) ||
-        (tcpedit->editdir == TCPEDIT_EDIT_C2S && direction == TCPR_DIR_C2S) ||
-        (tcpedit->editdir == TCPEDIT_EDIT_S2C && direction == TCPR_DIR_S2C)) {
-        return 1;
-    }
-    return 0;
-}
-
 
 /**
  * \brief Edit the given packet
@@ -99,7 +88,6 @@ tcpedit_packet(tcpedit_t *tcpedit, struct pcap_pkthdr **pkthdr,
     tcpedit->runtime.packetnum++;
     dbgx(3, "packet " COUNTER_SPEC " caplen %d", 
             tcpedit->runtime.packetnum, (*pkthdr)->caplen);
-
 
     /*
      * remove the Ethernet FCS (checksum)?
@@ -282,8 +270,13 @@ tcpedit_packet(tcpedit_t *tcpedit, struct pcap_pkthdr **pkthdr,
         }
     }
 
-    /* do we need to fix checksums? -- must always do this last! */
-    if ((tcpedit->fixcsum || needtorecalc)) {
+    /* do we need to fix checksums? -- must always do this last! 
+     * We recalc if:
+     * user specified --fixcsum
+     * packet was edited AND user did NOT specify --nofixcsum
+     */
+    if ((tcpedit->fixcsum == TCPEDIT_FIXCSUM_ON || 
+            (needtorecalc && tcpedit->fixcsum != TCPEDIT_FIXCSUM_DISABLE))) {
         if (ip_hdr != NULL) {
             retval = fix_ipv4_checksums(tcpedit, *pkthdr, ip_hdr);
         } else if (ip6_hdr != NULL) {
@@ -325,7 +318,6 @@ tcpedit_init(tcpedit_t **tcpedit_ex, int dlt)
     tcpedit->tos = -1;
     tcpedit->tclass = -1;
     tcpedit->flowlabel = -1;
-    tcpedit->editdir = TCPEDIT_EDIT_BOTH;
  
     memset(&(tcpedit->runtime), 0, sizeof(tcpedit_runtime_t));
     tcpedit->runtime.dlt1 = dlt;
@@ -510,7 +502,7 @@ tcpedit_close(tcpedit_t *tcpedit)
  * Return a ptr to the Layer 3 data.  Returns TCPEDIT_ERROR on error
  */
 const u_char *
-tcpedit_l3data(tcpedit_t *tcpedit, tcpedit_coder code, u_char *packet, const int pktlen)
+tcpedit_l3data(tcpedit_t *tcpedit, tcpedit_coder_t code, u_char *packet, const int pktlen)
 {
     u_char *result = NULL;
     if (code == BEFORE_PROCESS) {
@@ -525,7 +517,7 @@ tcpedit_l3data(tcpedit_t *tcpedit, tcpedit_coder code, u_char *packet, const int
  * return the length of the layer 2 header.  Returns TCPEDIT_ERROR on error
  */
 int 
-tcpedit_l2len(tcpedit_t *tcpedit, tcpedit_coder code, u_char *packet, const int pktlen)
+tcpedit_l2len(tcpedit_t *tcpedit, tcpedit_coder_t code, u_char *packet, const int pktlen)
 {
     int result = 0;
     if (code == BEFORE_PROCESS) {
@@ -540,7 +532,7 @@ tcpedit_l2len(tcpedit_t *tcpedit, tcpedit_coder code, u_char *packet, const int 
  * Returns the layer 3 type, often encoded as the layer2.proto field
  */
 int 
-tcpedit_l3proto(tcpedit_t *tcpedit, tcpedit_coder code, const u_char *packet, const int pktlen)
+tcpedit_l3proto(tcpedit_t *tcpedit, tcpedit_coder_t code, const u_char *packet, const int pktlen)
 {
     int result = 0;
     if (code == BEFORE_PROCESS) {
@@ -553,19 +545,19 @@ tcpedit_l3proto(tcpedit_t *tcpedit, tcpedit_coder code, const u_char *packet, co
 
 /*
 u_char *
-tcpedit_srcmac(tcpedit_t *tcpedit, tcpedit_coder code, u_char *packet, const int pktlen)
+tcpedit_srcmac(tcpedit_t *tcpedit, tcpedit_coder_t code, u_char *packet, const int pktlen)
 {
    
 }
 
 u_char *
-tcpedit_dstmac(tcpedit_t *tcpedit, tcpedit_coder code, u_char *packet, const int pktlen)
+tcpedit_dstmac(tcpedit_t *tcpedit, tcpedit_coder_t code, u_char *packet, const int pktlen)
 {
     
 }
 
 int 
-tcpedit_maclen(tcpedit_t *tcpedit, tcpedit_coder code)
+tcpedit_maclen(tcpedit_t *tcpedit, tcpedit_coder_t code)
 {
     
 }

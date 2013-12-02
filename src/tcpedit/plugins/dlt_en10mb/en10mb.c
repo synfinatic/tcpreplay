@@ -1,37 +1,50 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2006-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <stdlib.h>
 #include <string.h>
 
+#include "en10mb.h"
+#include "dlt_plugins-int.h"
 #include "tcpedit.h"
 #include "common.h"
 #include "tcpr.h"
 #include "dlt_utils.h"
 #include "tcpedit_stub.h"
 #include "../ethernet.h"
-#include "en10mb.h"
-
 
 static char _U_ dlt_name[] = "en10mb";
 static char dlt_prefix[] = "enet";
-static uint16_t dlt_value = DLT_EN10MB;
+static u_int16_t dlt_value = DLT_EN10MB;
 
 /*
  * Function to register ourselves.  This function is always called, regardless
@@ -457,7 +470,7 @@ dlt_en10mb_encode(tcpeditdlt_t *ctx, u_char *packet, int pktlen, tcpr_dir_t dir)
         /* are we changing VLAN info? */
         if (config->vlan_tag < 65535) {
             vlan->vlan_priority_c_vid = 
-                htons((uint16_t)config->vlan_tag & TCPR_802_1Q_VIDMASK);
+                htons((u_int16_t)config->vlan_tag & TCPR_802_1Q_VIDMASK);
         } else if (extra->vlan) {
             vlan->vlan_priority_c_vid = extra->vlan_tag;
         } else {
@@ -466,7 +479,7 @@ dlt_en10mb_encode(tcpeditdlt_t *ctx, u_char *packet, int pktlen, tcpr_dir_t dir)
         }
         
         if (config->vlan_pri < 255) {
-            vlan->vlan_priority_c_vid += htons((uint16_t)config->vlan_pri << 13);
+            vlan->vlan_priority_c_vid += htons((u_int16_t)config->vlan_pri << 13);
         } else if (extra->vlan) {
             vlan->vlan_priority_c_vid += extra->vlan_pri;
         } else {
@@ -475,7 +488,7 @@ dlt_en10mb_encode(tcpeditdlt_t *ctx, u_char *packet, int pktlen, tcpr_dir_t dir)
         }
             
         if (config->vlan_cfi < 255) {
-            vlan->vlan_priority_c_vid += htons((uint16_t)config->vlan_cfi << 12);
+            vlan->vlan_priority_c_vid += htons((u_int16_t)config->vlan_cfi << 12);
         } else if (extra->vlan) {
             vlan->vlan_priority_c_vid += extra->vlan_cfi;
         } else {

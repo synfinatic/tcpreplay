@@ -1,37 +1,50 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2006-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <stdlib.h>
 #include <string.h>
 
+#include "dlt_plugins-int.h"
+#include "dlt_utils.h"
+#include "null.h"
 #include "tcpedit.h"
 #include "common.h"
 #include "tcpr.h"
-#include "dlt_utils.h"
-#include "tcpedit_stub.h"
-#include "null.h"
 
 #include <sys/socket.h> // PF_* values
 
 static char dlt_name[] = "null";
 static char _U_ dlt_prefix[] = "null";
-static uint16_t dlt_value = DLT_NULL;
+static u_int16_t dlt_value = DLT_NULL;
 
 /*
  * From the libpcap man page:
@@ -110,12 +123,24 @@ int
 dlt_null_init(tcpeditdlt_t *ctx)
 {
     tcpeditdlt_plugin_t *plugin;
+    null_config_t *config;
     assert(ctx);
     
     if ((plugin = tcpedit_dlt_getplugin(ctx, dlt_value)) == NULL) {
         tcpedit_seterr(ctx->tcpedit, "Unable to initalize unregistered plugin %s", dlt_name);
         return TCPEDIT_ERROR;
-    }    
+    }
+    
+    /* allocate memory for our deocde extra data */
+    if (sizeof(null_extra_t) > 0)
+        ctx->decoded_extra = safe_malloc(sizeof(null_extra_t));
+
+    /* allocate memory for our config data */
+    if (sizeof(null_config_t) > 0)
+        plugin->config = safe_malloc(sizeof(null_config_t));
+    
+    config = (null_config_t *)plugin->config;
+    
 
     return TCPEDIT_OK; /* success */
 }
@@ -185,7 +210,7 @@ dlt_null_decode(tcpeditdlt_t *ctx, const u_char *packet, const int pktlen)
     if ((proto = dlt_null_proto(ctx, packet, pktlen)) == TCPEDIT_ERROR)
         return TCPEDIT_ERROR;
 
-    ctx->proto = (uint16_t)proto;
+    ctx->proto = (u_int16_t)proto;
     ctx->l2len = 4;
 
     return TCPEDIT_OK; /* success */
@@ -215,10 +240,10 @@ dlt_null_proto(tcpeditdlt_t *ctx, const u_char *packet, const int pktlen)
     assert(ctx);
     assert(packet);
     assert(pktlen > 0);
-    uint32_t *af_type; 
+    u_int32_t *af_type; 
     int protocol = 0;
     
-    af_type = (uint32_t *)packet;
+    af_type = (u_int32_t *)packet;
     if (*af_type == PF_INET || SWAPLONG(*af_type) == PF_INET) {
         protocol = ETHERTYPE_IP;
     } else if (*af_type == PF_INET6 || SWAPLONG(*af_type) == PF_INET6) {

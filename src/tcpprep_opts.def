@@ -1,31 +1,11 @@
-/* $Id$ */
-
-/*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
- *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
- *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 autogen definitions options;
 
 copyright = {
-    date        = "2000-2010";
+    date        = "2000-2012";
     owner       = "Aaron Turner";
-    type        = GPL;
-    eaddr       = "tcpreplay-users@lists.sourceforge.net";
+    type        = "bsd";
     author      = <<- EOText
-Copyright 2000-2010 Aaron Turner
+Copyright 2000-2012 Aaron Turner
 
 For support please use the tcpreplay-users@lists.sourceforge.net mailing list.
 
@@ -50,8 +30,7 @@ include         = "#include \"defines.h\"\n"
                 "#include \"tcpprep.h\"\n"
                 "#include <stdlib.h>\n"
                 "#include <string.h>\n"
-                "#include \"tcpprep_api.h\"\n"
-                "extern tcpprep_t *tcpprep;\n";
+                "extern tcpprep_opt_t options;\n";
 
 homerc          = "$$/";
 
@@ -74,7 +53,7 @@ EODetail;
 
 man-doc = <<- EOMan
 .SH "SEE ALSO"
-tcpdump(1), tcpbridge(1), tcprewrite(1), tcpreplay(1), tcpcapinfo(1)
+tcpdump(1), tcprewrite(1), tcpreplay(1)
 EOMan;
 
 
@@ -108,21 +87,21 @@ flag = {
     flags-cant  = mac;
     flag-code   = <<- EOAuto
 
-    tcpprep->options->mode = AUTO_MODE;
+    options.mode = AUTO_MODE;
     if (strcmp(OPT_ARG(AUTO), "bridge") == 0) {
-        tcpprep->options->automode = BRIDGE_MODE;
+        options.automode = BRIDGE_MODE;
     }
     else if (strcmp(OPT_ARG(AUTO), "router") == 0) {
-        tcpprep->options->automode = ROUTER_MODE;
+        options.automode = ROUTER_MODE;
     }
     else if (strcmp(OPT_ARG(AUTO), "client") == 0) {
-        tcpprep->options->automode = CLIENT_MODE;
+        options.automode = CLIENT_MODE;
     }
     else if (strcmp(OPT_ARG(AUTO), "server") == 0) {
-        tcpprep->options->automode = SERVER_MODE;
+        options.automode = SERVER_MODE;
     }
     else if (strcmp(OPT_ARG(AUTO), "first") == 0) {
-        tcpprep->options->automode = FIRST_MODE;
+        options.automode = FIRST_MODE;
     }
     else {
         errx(-1, "Invalid auto mode type: %s", OPT_ARG(AUTO));
@@ -181,8 +160,8 @@ flag = {
     flag-code   = <<- EOCidr
 
     char *cidr = safe_strdup(OPT_ARG(CIDR));
-    tcpprep->options->mode = CIDR_MODE;
-    if (!parse_cidr(&tcpprep->options->cidrdata, cidr, ","))
+    options.mode = CIDR_MODE;
+    if (!parse_cidr(&options.cidrdata, cidr, ","))
         errx(-1, "Unable to parse CIDR map: %s", OPT_ARG(CIDR));
     free(cidr);
 
@@ -218,10 +197,10 @@ flag = {
     int regex_error;
     char ebuf[EBUF_SIZE];
 
-    tcpprep->options->mode = REGEX_MODE;
-    if ((regex_error = regcomp(&tcpprep->options->preg, OPT_ARG(REGEX), 
+    options.mode = REGEX_MODE;
+    if ((regex_error = regcomp(&options.preg, OPT_ARG(REGEX), 
         REG_EXTENDED|REG_NOSUB))) {
-        regerror(regex_error, &tcpprep->options->preg, ebuf, EBUF_SIZE);
+        regerror(regex_error, &options.preg, ebuf, EBUF_SIZE);
         errx(-1, "Unable to compile regex: %s", ebuf);
     }
 
@@ -233,17 +212,17 @@ EOText;
 };
 
 flag = {
-    name        = port;
-    value       = p;
-    descrip     = "Port-split mode";
-    max         = 1;
-    flags-cant  = auto;
-    flags-cant  = regex;
-    flags-cant  = cidr;
-    flags-cant  = mac;
-    flag-code   = <<- EOPort
+    name         = port;
+    value        = p;
+    descrip      = "Port-split mode";
+    max          = 1;
+    flags-cant   = auto;
+    flags-cant   = regex;
+    flags-cant   = cidr;
+    flags-cant   = mac;
+    flag-code    = <<- EOPort
 
-    tcpprep->options->mode = PORT_MODE;
+    options.mode = PORT_MODE;
 
 EOPort;
     doc         = <<- EOText
@@ -253,26 +232,27 @@ EOText;
 };
 
 flag = {
-    name        = mac;
-    value       = e;
-    arg-type    = string;
-    max         = 1;
-    descrip     = "Source MAC split mode";
-    flags-cant  = auto;
-    flags-cant  = regex;
-    flags-cant  = cidr;
-    flags-cant  = port;
-    flag-code   = <<- EOMac
+    name       = mac;
+    value      = e;
+    arg-type   = string;
+    max        = 1;
+    descrip    = "Source MAC split mode";
+    flags-cant = auto;
+    flags-cant = regex;
+    flags-cant = cidr;
+    flags-cant = port;
+    flag-code  = <<- EOMac
 
-    tcpprep->options->mode = MAC_MODE;
-    tcpprep->options->maclist = safe_strdup(OPT_ARG(MAC));
+options.mode = MAC_MODE;
+options.maclist = safe_strdup(OPT_ARG(MAC));
+
 EOMac;
-
-    doc          = <<- EOText
+    doc        = <<- EOText
 Specify a list of MAC addresses to match against the source MAC
 of each packet.  Packets matching one of the values are classified
 as servers.
 EOText;
+
 };
 
 flag = {
@@ -301,8 +281,8 @@ flag = {
                 strlen(OPT_ARG(COMMENT)), (1 << 16) - 1 - MYARGS_LEN);
 
     /* save the comment */
-    tcpprep->options->comment = (char *)safe_malloc(strlen(OPT_ARG(COMMENT)) + 1);
-    strcpy(tcpprep->options->comment, OPT_ARG(COMMENT));
+    options.comment = (char *)safe_malloc(strlen(OPT_ARG(COMMENT)) + 1);
+    strcpy(options.comment, OPT_ARG(COMMENT));
 
 EOComment;
     doc         = <<- EOText
@@ -317,7 +297,7 @@ flag = {
     descrip   = "Do not embed any cache file comment";
     flag-code = <<- EOCode
 
-tcpprep->options->nocomment = 1;
+options.nocomment = 1;
 EOCode;
     doc       = <<- EOText
 By default, tcpprep includes the arguments passed on the command line
@@ -340,9 +320,9 @@ flag = {
     char *include;
 
     include = safe_strdup(OPT_ARG(INCLUDE));
-    tcpprep->options->xX.mode = xX_MODE_INCLUDE;
+    options.xX.mode = xX_MODE_INCLUDE;
 
-    if ((tcpprep->options->xX.mode = parse_xX_str(&tcpprep->options->xX, include, &tcpprep->options->bpf)) == xXError)
+    if ((options.xX.mode = parse_xX_str(&options.xX, include, &options.bpf)) == xXError)
         errx(-1, "Unable to parse include/exclude rule: %s", OPT_ARG(INCLUDE));
 
     free(include);
@@ -387,9 +367,9 @@ flag = {
     char *exclude;
 
     exclude = safe_strdup(OPT_ARG(EXCLUDE));
-    tcpprep->options->xX.mode = xX_MODE_EXCLUDE;
+    options.xX.mode = xX_MODE_EXCLUDE;
 
-    if ((tcpprep->options->xX.mode = parse_xX_str(&tcpprep->options->xX, exclude, &tcpprep->options->bpf)) == xXError)
+    if ((options.xX.mode = parse_xX_str(&options.xX, exclude, &options.bpf)) == xXError)
         errx(-1, "Unable to parse include/exclude rule: %s", OPT_ARG(EXCLUDE));
 
     free(exclude);
@@ -480,7 +460,7 @@ Example:
 http            80/tcp
 EOText;
     flag-code   = <<- EOServices
-    parse_services(OPT_ARG(SERVICES), &tcpprep->options->services);
+    parse_services(OPT_ARG(SERVICES), &options.services);
 
 EOServices;
 };
@@ -492,7 +472,7 @@ flag = {
     max         = 1;
     flag-code   = <<- EONonip
 
-    tcpprep->options->nonip = DIR_SERVER;
+    options.nonip = DIR_SERVER;
 
 EONonip;
     doc         = <<- EOText
@@ -593,13 +573,12 @@ flag = {
     descrip     = "Print version information";
     flag-code   = <<- EOVersion
 
-    fprintf(stderr, "tcpprep version: %s (build %s)", VERSION, git_version());
+    fprintf(stderr, "tcpprep version: %s (build %s)", VERSION, svn_version());
 #ifdef DEBUG
     fprintf(stderr, " (debug)");
 #endif
     fprintf(stderr, "\n");
-    fprintf(stderr, "Copyright 2000-2010 by Aaron Turner <aturner at synfin dot net>\n");
-    fprintf(stderr, "The entire Tcpreplay Suite is licensed under the GPLv3\n");
+    fprintf(stderr, "Copyright 2000-2012 by Aaron Turner <aturner at synfin dot net>\n");
     fprintf(stderr, "Cache file supported: %s\n", CACHEVERSION);
 #ifdef HAVE_LIBDNET
     fprintf(stderr, "Compiled against libdnet: %s\n", LIBDNET_VERSION);

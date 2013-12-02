@@ -1,37 +1,48 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2006-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <stdlib.h>
 #include <string.h>
 
+#include "dlt_plugins-int.h"
+#include "dlt_utils.h"
+#include "linuxsll.h"
 #include "tcpedit.h"
 #include "common.h"
 #include "tcpr.h"
-#include "dlt_utils.h"
-#include "tcpedit_stub.h"
-#include "../ethernet.h"
-#include "linuxsll.h"
-
 
 static char dlt_name[] = "linuxsll";
 static char _U_ dlt_prefix[] = "linuxsll";
-static uint16_t dlt_value = DLT_LINUX_SLL;
+static u_int16_t dlt_value = DLT_LINUX_SLL;
 
 /*
  * Function to register ourselves.  This function is always called, regardless
@@ -79,12 +90,12 @@ dlt_linuxsll_register(tcpeditdlt_t *ctx)
     plugin->plugin_get_layer3 = dlt_linuxsll_get_layer3;
     plugin->plugin_merge_layer3 = dlt_linuxsll_merge_layer3;
     plugin->plugin_get_mac = dlt_linuxsll_get_mac;
-    
+
     /* add it to the available plugin list */
     return tcpedit_dlt_addplugin(ctx, plugin);
 }
 
- 
+
 /*
  * Initializer function.  This function is called only once, if and only iif
  * this plugin will be utilized.  Remember, if you need to keep track of any state, 
@@ -97,12 +108,12 @@ dlt_linuxsll_init(tcpeditdlt_t *ctx)
     tcpeditdlt_plugin_t *plugin;
     linuxsll_config_t *config;
     assert(ctx);
-    
+
     if ((plugin = tcpedit_dlt_getplugin(ctx, dlt_value)) == NULL) {
         tcpedit_seterr(ctx->tcpedit, "Unable to initalize unregistered plugin %s", dlt_name);
         return TCPEDIT_ERROR;
     }
-    
+
     /* allocate memory for our deocde extra data */
     if (sizeof(linuxsll_extra_t) > 0)
         ctx->decoded_extra = safe_malloc(sizeof(linuxsll_extra_t));
@@ -110,9 +121,9 @@ dlt_linuxsll_init(tcpeditdlt_t *ctx)
     /* allocate memory for our config data */
     if (sizeof(linuxsll_config_t) > 0)
         plugin->config = safe_malloc(sizeof(linuxsll_config_t));
-    
+
     config = (linuxsll_config_t *)plugin->config;
-    
+
     return TCPEDIT_OK; /* success */
 }
 
@@ -132,12 +143,11 @@ dlt_linuxsll_cleanup(tcpeditdlt_t *ctx)
         return TCPEDIT_ERROR;
     }
 
-    /* FIXME: make this function do something if necessary */
     if (ctx->decoded_extra != NULL) {
         safe_free(ctx->decoded_extra);
         ctx->decoded_extra = NULL;
     }
-        
+
     if (plugin->config != NULL) {
         safe_free(plugin->config);
         plugin->config = NULL;
@@ -174,21 +184,29 @@ dlt_linuxsll_parse_opts(tcpeditdlt_t *ctx)
 int 
 dlt_linuxsll_decode(tcpeditdlt_t *ctx, const u_char *packet, const int pktlen)
 {
+    static int already_warned_user = 0;
     linux_sll_header_t *linux_sll;
     assert(ctx);
     assert(packet);
     assert(pktlen > (int)sizeof(linux_sll_header_t));
-    
+
     linux_sll = (linux_sll_header_t *)packet;
     ctx->proto = linux_sll->proto;
     ctx->l2len = sizeof(linux_sll_header_t);
 
-    
+
     if (ntohs(linux_sll->type) == ARPHRD_ETHER) { /* ethernet */
         memcpy(&(ctx->srcaddr), linux_sll->address, ETHER_ADDR_LEN);
-    } else {
-        tcpedit_seterr(ctx->tcpedit, "%s", "DLT_LINUX_SLL pcap's must contain only ethernet packets");
-        return TCPEDIT_ERROR;
+    } else if (! already_warned_user) {
+        /*
+         * Plugins have to decide at init time if they provide source MAC addresses
+         * or not, but LINUX_SLL headers the source MAC is optional.  Hence,
+         * if we can't parse out the source MAC during processing, we'll generate
+         * this warning for the user so they know to specify it on the CLI
+         */
+        already_warned_user = 1;
+        tcpedit_setwarn(ctx->tcpedit, "%s", "Unable to use source MAC in LINUX_SLL header; maybe you should specify one?");
+        return TCPEDIT_WARN;
     }
 
     return TCPEDIT_OK; /* success */
@@ -221,7 +239,7 @@ dlt_linuxsll_proto(tcpeditdlt_t *ctx, const u_char *packet, const int pktlen)
     assert(pktlen >= (int)sizeof(linux_sll_header_t));
 
     linux_sll = (linux_sll_header_t *)packet;
-    
+
     return linux_sll->proto;
 }
 
@@ -255,11 +273,11 @@ dlt_linuxsll_merge_layer3(tcpeditdlt_t *ctx, u_char *packet, const int pktlen, u
     assert(ctx);
     assert(packet);
     assert(l3data);
-    
+
     l2len = dlt_linuxsll_l2len(ctx, packet, pktlen);
-    
+
     assert(pktlen >= l2len);
-    
+
     return tcpedit_dlt_l3data_merge(ctx, packet, pktlen, l3data, l2len);
 }
 
@@ -279,7 +297,7 @@ dlt_linuxsll_l2len(tcpeditdlt_t *ctx, const u_char *packet, const int pktlen)
 /*
  * return a static pointer to the source/destination MAC address
  * return NULL on error/address doesn't exist
- */    
+ */
 u_char *
 dlt_linuxsll_get_mac(tcpeditdlt_t *ctx, tcpeditdlt_mac_type_t mac, const u_char *packet, const int pktlen)
 {
@@ -287,17 +305,16 @@ dlt_linuxsll_get_mac(tcpeditdlt_t *ctx, tcpeditdlt_mac_type_t mac, const u_char 
     assert(packet);
     assert(pktlen);
 
-    /* FIXME: return a ptr to the source or dest mac address. */
     switch(mac) {
     case SRC_MAC:
         memcpy(ctx->srcmac, &packet[6], 8); /* linuxssl defines the src mac field to be 8 bytes, not 6 */
         return(ctx->srcmac);
         break;
-        
+
     case DST_MAC:
         return(NULL);
         break;
-        
+
     default:
         errx(-1, "Invalid tcpeditdlt_mac_type_t: %d", mac);
     }

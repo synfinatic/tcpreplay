@@ -2,6 +2,7 @@ tcpprep
 tcpcapinfo
 tcprewrite
 tcpreplay
+tcpliveplay
 tcpreplay-edit
 flowreplay
 tcpbridge

@@ -1,27 +1,40 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2001-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
 #include "defines.h"
 #include "common.h"
 
-#include "tcpedit.h"
+#include "tcpedit-int.h"
 #include "edit_packet.h"
 #include "checksum.h"
 #include "lib/sll.h"
@@ -34,9 +47,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-static uint32_t randomize_ipv4_addr(tcpedit_t *tcpedit, uint32_t ip);
-static uint32_t remap_ipv4(tcpedit_t *tcpedit, tcpr_cidr_t *cidr, const uint32_t original);
-static int is_unicast_ipv4(tcpedit_t *tcpedit, uint32_t ip);
+static u_int32_t randomize_ipv4_addr(tcpedit_t *tcpedit, u_int32_t ip);
+static u_int32_t remap_ipv4(tcpedit_t *tcpedit, tcpr_cidr_t *cidr, const u_int32_t original);
+static int is_unicast_ipv4(tcpedit_t *tcpedit, u_int32_t ip);
 
 static void randomize_ipv6_addr(tcpedit_t *tcpedit, struct tcpr_in6_addr *addr);
 static int remap_ipv6(tcpedit_t *tcpedit, tcpr_cidr_t *cidr, struct tcpr_in6_addr *addr);
@@ -108,8 +121,8 @@ fix_ipv6_checksums(tcpedit_t *tcpedit, struct pcap_pkthdr *pkthdr, ipv6_hdr_t *i
  * returns a new 32bit integer which is the randomized IP 
  * based upon the user specified seed
  */
-static uint32_t
-randomize_ipv4_addr(tcpedit_t *tcpedit, uint32_t ip)
+static u_int32_t
+randomize_ipv4_addr(tcpedit_t *tcpedit, u_int32_t ip)
 {
     assert(tcpedit);
     
@@ -123,7 +136,7 @@ randomize_ipv4_addr(tcpedit_t *tcpedit, uint32_t ip)
 static void
 randomize_ipv6_addr(tcpedit_t *tcpedit, struct tcpr_in6_addr *addr)
 {
-    uint32_t *p;
+    u_int32_t *p;
     int i;
     u_char was_multicast;
 
@@ -171,12 +184,12 @@ randomize_ipv4(tcpedit_t *tcpedit, struct pcap_pkthdr *pkthdr,
     dbgx(1, "Old Src IP: %s\tOld Dst IP: %s", srcip, dstip);
 
     /* don't rewrite broadcast addresses */
-    if ((tcpedit->skip_broadcast && is_unicast_ipv4(tcpedit, (uint32_t)ip_hdr->ip_dst.s_addr)) 
+    if ((tcpedit->skip_broadcast && is_unicast_ipv4(tcpedit, (u_int32_t)ip_hdr->ip_dst.s_addr)) 
         || !tcpedit->skip_broadcast) {
         ip_hdr->ip_dst.s_addr = randomize_ipv4_addr(tcpedit, ip_hdr->ip_dst.s_addr);
     }
     
-    if ((tcpedit->skip_broadcast && is_unicast_ipv4(tcpedit, (uint32_t)ip_hdr->ip_src.s_addr))
+    if ((tcpedit->skip_broadcast && is_unicast_ipv4(tcpedit, (u_int32_t)ip_hdr->ip_src.s_addr))
         || !tcpedit->skip_broadcast) {
         ip_hdr->ip_src.s_addr = randomize_ipv4_addr(tcpedit, ip_hdr->ip_src.s_addr);
     }
@@ -253,7 +266,7 @@ untrunc_packet(tcpedit_t *tcpedit, struct pcap_pkthdr *pkthdr,
         if (! tcpedit->mtu_truncate)
             return(0);
     }
-    
+
     if ((l2len = layer2len(tcpedit)) < 0) {
         tcpedit_seterr(tcpedit, "Non-sensical layer 2 length: %d", l2len);
         return -1;
@@ -263,9 +276,9 @@ untrunc_packet(tcpedit_t *tcpedit, struct pcap_pkthdr *pkthdr,
     if (tcpedit->fixlen == TCPEDIT_FIXLEN_PAD) {
         /*
          * this should be an unnecessary check
-  	     * but I've gotten a report that sometimes the caplen > len
-  	     * which seems like a corrupted pcap
-  	     */
+         * but I've gotten a report that sometimes the caplen > len
+         * which seems like a corrupted pcap
+         */
         if (pkthdr->len > pkthdr->caplen) {
             memset(pktdata + pkthdr->caplen, '\0', pkthdr->len - pkthdr->caplen);
             pkthdr->caplen = pkthdr->len;
@@ -282,10 +295,10 @@ untrunc_packet(tcpedit_t *tcpedit, struct pcap_pkthdr *pkthdr,
         pkthdr->len = pkthdr->caplen;
     }
     else if (tcpedit->mtu_truncate) {
-        if (pkthdr->len > (uint32_t)(tcpedit->mtu + l2len)) {
+        if (pkthdr->len > (u_int16_t)(tcpedit->mtu + l2len)) {
             /* first truncate the packet */
             pkthdr->len = pkthdr->caplen = l2len + tcpedit->mtu;
-            
+
             /* if ip_hdr exists, update the length */
             if (ip_hdr != NULL) {
                 ip_hdr->ip_len = htons(tcpedit->mtu);
@@ -349,7 +362,7 @@ extract_data(tcpedit_t *tcpedit, const u_char *pktdata, int caplen,
 
     /* TCP ? */
     if (ip_hdr->ip_p == IPPROTO_TCP) {
-        tcp_hdr = (tcp_hdr_t *) get_layer4_v4(ip_hdr, datalen);
+        tcp_hdr = (tcp_hdr_t *) get_layer4_v4(ip_hdr);
         datalen -= tcp_hdr->th_off << 2;
         if (datalen <= 0)
             goto nodata;
@@ -359,7 +372,7 @@ extract_data(tcpedit_t *tcpedit, const u_char *pktdata, int caplen,
 
     /* UDP ? */
     else if (ip_hdr->ip_p == IPPROTO_UDP) {
-        udp_hdr = (udp_hdr_t *) get_layer4_v4(ip_hdr, datalen);
+        udp_hdr = (udp_hdr_t *) get_layer4_v4(ip_hdr);
         datalen -= TCPR_UDP_H;
         if (datalen <= 0)
             goto nodata;
@@ -398,23 +411,23 @@ rewrite_ipv4_ttl(tcpedit_t *tcpedit, ipv4_hdr_t *ip_hdr)
     assert(tcpedit);
 
     /* make sure there's something to edit */
-    if (ip_hdr == NULL || tcpedit->ttl_mode == false)
+    if (ip_hdr == NULL || tcpedit->ttl_mode == TCPEDIT_TTL_OFF)
         return(0);
         
     switch(tcpedit->ttl_mode) {
-    case TCPEDIT_TTL_MODE_SET:
+    case TCPEDIT_TTL_SET:
         if (ip_hdr->ip_ttl == tcpedit->ttl_value)
             return(0);           /* no change required */
         ip_hdr->ip_ttl = tcpedit->ttl_value;
         break;
-    case TCPEDIT_TTL_MODE_ADD:
+    case TCPEDIT_TTL_ADD:
         if (((int)ip_hdr->ip_ttl + tcpedit->ttl_value) > 255) {
             ip_hdr->ip_ttl = 255;
         } else {
             ip_hdr->ip_ttl += tcpedit->ttl_value;
         }
         break;
-    case TCPEDIT_TTL_MODE_SUB:
+    case TCPEDIT_TTL_SUB:
         if (ip_hdr->ip_ttl <= tcpedit->ttl_value) {
             ip_hdr->ip_ttl = 1;
         } else {
@@ -437,23 +450,23 @@ rewrite_ipv6_hlim(tcpedit_t *tcpedit, ipv6_hdr_t *ip6_hdr)
     assert(tcpedit);
 
     /* make sure there's something to edit */
-    if (ip6_hdr == NULL || tcpedit->ttl_mode == TCPEDIT_TTL_MODE_OFF)
+    if (ip6_hdr == NULL || tcpedit->ttl_mode == TCPEDIT_TTL_OFF)
         return(0);
 
     switch(tcpedit->ttl_mode) {
-    case TCPEDIT_TTL_MODE_SET:
+    case TCPEDIT_TTL_SET:
         if (ip6_hdr->ip_hl == tcpedit->ttl_value)
             return(0);           /* no change required */
         ip6_hdr->ip_hl = tcpedit->ttl_value;
         break;
-    case TCPEDIT_TTL_MODE_ADD:
+    case TCPEDIT_TTL_ADD:
         if (((int)ip6_hdr->ip_hl + tcpedit->ttl_value) > 255) {
             ip6_hdr->ip_hl = 255;
         } else {
             ip6_hdr->ip_hl += tcpedit->ttl_value;
         }
         break;
-    case TCPEDIT_TTL_MODE_SUB:
+    case TCPEDIT_TTL_SUB:
         if (ip6_hdr->ip_hl <= tcpedit->ttl_value) {
             ip6_hdr->ip_hl = 1;
         } else {
@@ -471,10 +484,10 @@ rewrite_ipv6_hlim(tcpedit_t *tcpedit, ipv6_hdr_t *ip6_hdr)
  * onto that netblock.  ie: 10.0.0.0/8 and 192.168.55.123 -> 10.168.55.123
  * while 10.150.9.0/24 and 192.168.55.123 -> 10.150.9.123
  */
-static uint32_t
-remap_ipv4(tcpedit_t *tcpedit, tcpr_cidr_t *cidr, const uint32_t original)
+static u_int32_t
+remap_ipv4(tcpedit_t *tcpedit, tcpr_cidr_t *cidr, const u_int32_t original)
 {
-    uint32_t ipaddr = 0, network = 0, mask = 0, result = 0;
+    u_int32_t ipaddr = 0, network = 0, mask = 0, result = 0;
 
     assert(tcpedit);
     assert(cidr);
@@ -715,7 +728,7 @@ randomize_iparp(tcpedit_t *tcpedit, struct pcap_pkthdr *pkthdr,
 {
     arp_hdr_t *arp_hdr = NULL;
     int l2len = 0;
-    uint32_t *ip, tempip;
+    u_int32_t *ip, tempip;
     u_char *add_hdr;
 
     assert(tcpedit);
@@ -735,14 +748,14 @@ randomize_iparp(tcpedit_t *tcpedit, struct pcap_pkthdr *pkthdr,
         /* jump to the addresses */
         add_hdr = (u_char *)arp_hdr;
         add_hdr += sizeof(arp_hdr_t) + arp_hdr->ar_hln;
-        ip = (uint32_t *)add_hdr;
+        ip = (u_int32_t *)add_hdr;
         tempip = randomize_ipv4_addr(tcpedit, *ip);
-        memcpy(ip, &tempip, sizeof(uint32_t));
+        memcpy(ip, &tempip, sizeof(u_int32_t));
 
         add_hdr += arp_hdr->ar_pln + arp_hdr->ar_hln;
-        ip = (uint32_t *)add_hdr;
+        ip = (u_int32_t *)add_hdr;
         tempip = randomize_ipv4_addr(tcpedit, *ip);
-        memcpy(ip, &tempip, sizeof(uint32_t));
+        memcpy(ip, &tempip, sizeof(u_int32_t));
     }
 
     return 1; /* yes we changed the packet */
@@ -760,12 +773,12 @@ int
 rewrite_iparp(tcpedit_t *tcpedit, arp_hdr_t *arp_hdr, int cache_mode)
 {
     u_char *add_hdr = NULL;
-    uint32_t *ip1 = NULL, *ip2 = NULL;
-    uint32_t newip = 0;
+    u_int32_t *ip1 = NULL, *ip2 = NULL;
+    u_int32_t newip = 0;
     tcpr_cidrmap_t *cidrmap1 = NULL, *cidrmap2 = NULL;
     int didsrc = 0, diddst = 0, loop = 1;
 #ifdef FORCE_ALIGN
-    uint32_t iptemp;
+    u_int32_t iptemp;
 #endif
 
     assert(tcpedit);
@@ -796,14 +809,14 @@ rewrite_iparp(tcpedit_t *tcpedit, arp_hdr_t *arp_hdr, int cache_mode)
         /* jump to the addresses */
         add_hdr = (u_char *)arp_hdr;
         add_hdr += sizeof(arp_hdr_t) + arp_hdr->ar_hln;
-        ip1 = (uint32_t *)add_hdr;
+        ip1 = (u_int32_t *)add_hdr;
         add_hdr += arp_hdr->ar_pln + arp_hdr->ar_hln;
 #ifdef FORCE_ALIGN
         /* copy IP2 to a temporary buffer for processing */
-        memcpy(&iptemp, add_hdr, sizeof(uint32_t));
+        memcpy(&iptemp, add_hdr, sizeof(u_int32_t));
         ip2 = &iptemp;
 #else
-        ip2 = (uint32_t *)add_hdr;
+        ip2 = (u_int32_t *)add_hdr;
 #endif
         
 
@@ -838,7 +851,7 @@ rewrite_iparp(tcpedit_t *tcpedit, arp_hdr_t *arp_hdr, int cache_mode)
 
 #ifdef FORCE_ALIGN
             /* copy temporary IP to IP2 location in buffer */
-            memcpy(add_hdr, &iptemp, sizeof(uint32_t));
+            memcpy(add_hdr, &iptemp, sizeof(u_int32_t));
 #endif
 
             /*
@@ -873,7 +886,7 @@ rewrite_iparp(tcpedit_t *tcpedit, arp_hdr_t *arp_hdr, int cache_mode)
  * for broadcast/multicast addresses.  Returns -1 on error
  */
 static int
-is_unicast_ipv4(tcpedit_t *tcpedit, uint32_t ip)
+is_unicast_ipv4(tcpedit_t *tcpedit, u_int32_t ip)
 {
     assert(tcpedit);
    

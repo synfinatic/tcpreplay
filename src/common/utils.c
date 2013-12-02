@@ -1,20 +1,33 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2001-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from 
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -102,12 +115,10 @@ _our_safe_strdup(const char *str, const char *funcname, const int line, const ch
 void
 _our_safe_free(void *ptr, const char *funcname, const int line, const char *file)
 {
-    assert(funcname);
-    assert(line);
-    assert(file);
-
-    if (ptr == NULL)
-        return;
+    if (ptr == NULL) {
+        fprintf(stderr, "ERROR in %s:%s() line %d: Unable to call free on a NULL ptr", file, funcname, line);
+        exit(-1);
+    }
 
     free(ptr);
     ptr = NULL;
@@ -117,33 +128,32 @@ _our_safe_free(void *ptr, const char *funcname, const int line, const char *file
  * Print various packet statistics
  */
 void
-packet_stats(const tcpreplay_stats_t *stats)
+packet_stats(struct timeval *begin, struct timeval *end,
+        COUNTER bytes_sent, COUNTER pkts_sent, COUNTER failed)
 {
-    struct timeval diff;
     float bytes_sec = 0.0, mb_sec = 0.0, pkts_sec = 0.0;
     double frac_sec;
+    struct timeval diff;
 
-    assert(stats);
-
-    timersub(&stats->end_time, &stats->start_time, &diff);
+    timersub(end, begin, &diff);
     timer2float(&diff, frac_sec);
 
     if (timerisset(&diff)) {
-        if (stats->bytes_sent) {
-            bytes_sec = stats->bytes_sent / frac_sec;
+        if (bytes_sent){
+            bytes_sec = bytes_sent / frac_sec;
             mb_sec = (bytes_sec * 8) / (1000 * 1000);
         }
-        if (stats->pkts_sent)
-            pkts_sec = stats->pkts_sent / frac_sec;
+        if (pkts_sent)
+            pkts_sec = pkts_sent / frac_sec;
     }
     printf("Actual: " COUNTER_SPEC " packets (" COUNTER_SPEC " bytes) sent in %.02f seconds.\n",
-            stats->pkts_sent, stats->bytes_sent, frac_sec);
+            pkts_sent, bytes_sent, frac_sec);
     printf("Rated: %.1f Bps, %.2f Mbps, %.2f pps\n",
            bytes_sec, mb_sec, pkts_sec);
 
-    if (stats->failed)
+    if (failed)
         printf(COUNTER_SPEC " write attempts failed from full buffers and were repeated\n",
-              stats->failed);
+              failed);
 
 }
 
@@ -205,43 +215,8 @@ read_hexstring(const char *l2string, u_char *hex, const int hexlen)
 int
 inet_aton(const char *name, struct in_addr *addr)
 {
-    in_addr_t a = inet_addr(name);
+    in_addr_t a = inet_addr (name);
     addr->s_addr = a;
     return a != (in_addr_t)-1;
 }
 #endif
-
-#if BITS_PER_LONG == 32
-uint32_t __div64_32(uint64_t *n, uint32_t base)
-{
-    uint64_t rem = *n;
-    uint64_t b = base;
-    uint64_t res, d = 1;
-    uint32_t high = rem >> 32;
-
-    /* Reduce the thing a bit first */
-    res = 0;
-    if (high >= base) {
-        high /= base;
-        res = (uint64_t) high << 32;
-        rem -= (uint64_t) (high*base) << 32;
-    }
-
-    while ((int64_t)b > 0 && b < rem) {
-        b = b+b;
-        d = d+d;
-    }
-
-    do {
-        if (rem >= b) {
-            rem -= b;
-            res += d;
-        }
-        b >>= 1;
-        d >>= 1;
-    } while (d);
-
-    *n = res;
-    return rem;
-}
-#endif /* BITS_PER_LONG == 32 */

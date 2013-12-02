@@ -67,4 +67,3 @@ fragroute_t * fragroute_init(const int mtu, const int dlt, const char *config, c
 void fragroute_close(fragroute_t *ctx);
 
 #endif /* __FRAGROUTE_H__ */
-

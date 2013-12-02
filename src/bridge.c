@@ -1,20 +1,33 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2001-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -29,26 +42,31 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#ifdef HAVE_BPF
+#include <sys/select.h> /* necessary for using select() for BPF devices */
+#endif
+
 #include "tcpbridge.h"
 #include "bridge.h"
+#include "send_packets.h"
 #include "tcpedit/tcpedit.h"
 
 extern tcpbridge_opt_t options;
-extern tcpreplay_stats_t stats;
+extern struct timeval begin, end;
+extern COUNTER bytes_sent, failed, pkts_sent;
+extern volatile int didsig;
+
 #ifdef DEBUG
 extern int debug;
 #endif
-volatile bool didsig;
 
 static int live_callback(struct live_data_t *,
                          struct pcap_pkthdr *, const u_char *);
 
-static void signal_catcher(int signo);
-
 /**
  * First, prep our RB Tree which tracks where each (source)
  * MAC really lives so we don't create really nasty network
- * storms.
+ * storms.  
  */
 static struct macsrc_t *new_node(void);
 
@@ -81,7 +99,7 @@ new_node(void)
     struct macsrc_t *node;
 
     node = (struct macsrc_t *)safe_malloc(sizeof(struct macsrc_t));
-
+    
     memset(node, '\0', sizeof(struct macsrc_t));
     return (node);
 }
@@ -99,7 +117,7 @@ do_bridge_unidirectional(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
 
     assert(options);
     assert(tcpedit);
-
+    
     livedata.tcpedit = tcpedit;
     livedata.source = PCAP_INT1;
     livedata.pcap = options->pcap1;
@@ -109,11 +127,16 @@ do_bridge_unidirectional(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
             (pcap_handler)live_callback, (u_char *) &livedata)) < 0) {
         warnx("Error in pcap_loop(): %s", pcap_geterr(options->pcap1));
     }
+    
 }
 
+#ifndef HAVE_BPF
 /**
  * main loop for bridging in both directions.  Since we dealing with two handles
- * we need to poll() on them which isn't the most efficent
+ * we need to poll() on them which isn't the most efficent. 
+ *
+ * Note that this function is only used on systems which do not have a BPF
+ * device because poll() behaves poorly with /dev/bpf
  */
 static void
 do_bridge_bidirectional(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
@@ -121,7 +144,7 @@ do_bridge_bidirectional(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
     struct pollfd polls[2];     /* one for left & right pcap */
     int pollresult, pollcount, timeout;
     struct live_data_t livedata;
-
+    
     assert(options);
     assert(tcpedit);
 
@@ -134,18 +157,18 @@ do_bridge_bidirectional(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
      * note that if -L wasn't specified, limit_send is
      * set to 0 so this will loop infinately
      */
-    while ((options->limit_send == 0) || (options->limit_send > stats.pkts_sent)) {
+    while ((options->limit_send == 0) || (options->limit_send > pkts_sent)) {
         if (didsig)
             break;
 
         dbgx(3, "limit_send: " COUNTER_SPEC " \t pkts_sent: " COUNTER_SPEC, 
-            options->limit_send, stats.pkts_sent);
+            options->limit_send, pkts_sent);
 
         /* reset the result codes */
         polls[PCAP_INT1].revents = 0;
         polls[PCAP_INT1].events = POLLIN;
         polls[PCAP_INT1].fd = pcap_fileno(options->pcap1);
-
+        
         polls[PCAP_INT2].revents = 0;
         polls[PCAP_INT2].events = POLLIN;
         polls[PCAP_INT2].fd = pcap_fileno(options->pcap2);
@@ -159,7 +182,7 @@ do_bridge_bidirectional(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
         /* poll has returned, process the result */
         if (pollresult > 0) {
             dbgx(3, "pollresult: %d", pollresult);
-
+            
             /* success, got one or more packets */
             if (polls[PCAP_INT1].revents > 0) {
                 dbg(5, "Processing first interface");
@@ -193,6 +216,95 @@ do_bridge_bidirectional(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
 
 } /* do_bridge_bidirectional() */
 
+#elif defined HAVE_BPF && defined HAVE_PCAP_SETNONBLOCK 
+/**
+ * main loop for bridging in both directions with BPF.  We'll be using
+ * select() because that works better on older *BSD and OSX
+ *
+ * See this for details behind this maddness:
+ * http://article.gmane.org/gmane.network.tcpdump.devel/3581
+ */
+static void
+do_bridge_bidirectional(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
+{
+    fd_set readfds, writefds, errorfds;
+    struct live_data_t livedata;
+    int fd, nfds, ret;
+    struct timeval timeout = { 0, 100 }; /* default to 100ms timeout */
+    char ebuf[PCAP_ERRBUF_SIZE];
+    
+    assert(options);
+    assert(tcpedit);
+
+    livedata.tcpedit = tcpedit;
+    livedata.options = options;
+
+    /* 
+     * loop until ctrl-C or we've sent enough packets
+     * note that if -L wasn't specified, limit_send is
+     * set to 0 so this will loop infinately
+     */
+    while ((options->limit_send == 0) || (options->limit_send > pkts_sent)) {
+        if (didsig)
+            break;
+
+        dbgx(3, "limit_send: " COUNTER_SPEC " \t pkts_sent: " COUNTER_SPEC, 
+            options->limit_send, pkts_sent);
+
+        /* reset the result codes */
+        FD_ZERO(&readfds);
+        FD_ZERO(&writefds);
+        FD_ZERO(&errorfds);
+
+        /* set for reading */
+#ifdef HAVE_PCAP_GET_SELECTABLE_FD
+        fd = pcap_get_selectable_fd(options->pcap1);
+#else
+        fd = pcap_fileno(options->pcap1);
+#endif
+        if ((pcap_setnonblock(options->pcap1, 1, ebuf)) < 0)
+            errx(1, "Unable to set %s into nonblocking mode: %s", options->intf1, ebuf);
+        FD_SET(fd, &readfds);
+            
+#ifdef HAVE_PCAP_GET_SELECTABLE_FD
+        fd = pcap_get_selectable_fd(options->pcap2);
+#else
+        fd = pcap_fileno(options->pcap2);
+#endif
+        if ((pcap_setnonblock(options->pcap2, 1, ebuf)) < 0)
+            errx(1, "Unable to set %s into nonblocking mode: %s", options->intf2, ebuf);
+        FD_SET(fd, &readfds);
+        
+        nfds = 2;
+
+        /* wait for a packet on the two interfaces */
+        ret = select(nfds, &readfds, &writefds, &errorfds, &timeout);
+
+        /* 
+         * There is a problem with OS X and certian *BSD's when using
+         * select() on a character device like /dev/bpf.  Hence we always
+         * must attempt to read off each fd after the timeout.  This is why
+         * we put the fd's in nonblocking mode above!
+         */
+         
+        dbg(5, "Processing first interface");
+        livedata.source = PCAP_INT1;
+        livedata.pcap = options->pcap1;
+        pcap_dispatch(options->pcap1, -1, (pcap_handler) live_callback,
+                      (u_char *) &livedata);
+         
+        dbg(5, "Processing second interface");
+        livedata.source = PCAP_INT2;
+        livedata.pcap = options->pcap2;
+        pcap_dispatch(options->pcap2, -1, (pcap_handler) live_callback,
+                      (u_char *) &livedata);
+
+        /* go back to the top of the loop */
+    }    
+} 
+#else
+#error "Your system needs a libpcap with pcap_setnonblock().  Please upgrade libpcap."
+#endif
 
 /**
  * Main entry point to bridging.  Does some initial setup and then calls the 
@@ -200,7 +312,7 @@ do_bridge_bidirectional(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
  */
 void
 do_bridge(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
-{
+{   
     /* do we apply a bpf filter? */
     if (options->bpf.filter != NULL) {
         /* compile filter */
@@ -208,7 +320,7 @@ do_bridge(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
         if (pcap_compile(options->pcap1, &options->bpf.program, options->bpf.filter, options->bpf.optimize, 0) != 0) {
             errx(-1, "Error compiling BPF filter: %s", pcap_geterr(options->pcap1));
         }
-
+        
         /* apply filter */
         pcap_setfilter(options->pcap1, &options->bpf.program);
 
@@ -219,7 +331,7 @@ do_bridge(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
             if (pcap_compile(options->pcap2, &options->bpf.program, options->bpf.filter, options->bpf.optimize, 0) != 0) {
                 errx(-1, "Error compiling BPF filter: %s", pcap_geterr(options->pcap2));
             }
-
+        
             /* apply filter */
             pcap_setfilter(options->pcap2, &options->bpf.program);
         }
@@ -227,7 +339,7 @@ do_bridge(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
 
     /* register signals */
     didsig = 0;
-    (void)signal(SIGINT, signal_catcher);
+    (void)signal(SIGINT, catcher);
 
 
     if (options->unidir == 1) {
@@ -235,10 +347,8 @@ do_bridge(tcpbridge_opt_t *options, tcpedit_t *tcpedit)
     } else {
         do_bridge_bidirectional(options, tcpedit);
     }
-
-    if (gettimeofday(&stats.end_time, NULL) < 0)
-        errx(-1, "gettimeofday() failed: %s",  strerror(errno));
-    packet_stats(&stats);
+            
+    packet_stats(&begin, &end, bytes_sent, pkts_sent, failed);
 }
 
 
@@ -305,7 +415,7 @@ live_callback(struct live_data_t *livedata, struct pcap_pkthdr *pkthdr,
     }
 
     node = RB_FIND(macsrc_tree, &macsrc_root, &finder);
-
+    
     /* if we can't find the node, build a new one */
     if (node == NULL) {
         dbg(1, "Unable to find MAC in the tree");
@@ -314,7 +424,7 @@ live_callback(struct live_data_t *livedata, struct pcap_pkthdr *pkthdr,
         memcpy(&node->key, &finder.key, ETHER_ADDR_LEN);
         RB_INSERT(macsrc_tree, &macsrc_root, node);
     }
-
+    
     /* otherwise compare sources */
     else if (node->source != livedata->source) {
         dbg(1, "Found the dest MAC in the tree and it doesn't match this source NIC... skipping packet");
@@ -330,7 +440,7 @@ live_callback(struct live_data_t *livedata, struct pcap_pkthdr *pkthdr,
 
     l2proto = tcpedit_l3proto(livedata->tcpedit, BEFORE_PROCESS, pktdata, pkthdr->len);
     dbgx(2, "Packet protocol: %04hx", l2proto);
-
+    
     /* should we skip this packet based on CIDR match? */
     if (l2proto == ETHERTYPE_IP) {
         dbg(3, "Packet is IPv4");
@@ -383,10 +493,10 @@ live_callback(struct live_data_t *livedata, struct pcap_pkthdr *pkthdr,
                 livedata->options->intf1);
             send = livedata->options->pcap1;
             break;
-
+        
         default:
             errx(-1, "wtf?  our node->source != PCAP_INT1 and != PCAP_INT2: %c", 
-                 node->source);
+                 node->source);        
     }
 
     /*
@@ -396,20 +506,13 @@ live_callback(struct live_data_t *livedata, struct pcap_pkthdr *pkthdr,
          errx(-1, "Unable to send packet out %s: %s", 
             send == livedata->options->pcap1 ? livedata->options->intf1 : livedata->options->intf2, pcap_geterr(send));
 
-    stats.bytes_sent += pkthdr->caplen;
-    stats.pkts_sent++;
+    bytes_sent += pkthdr->caplen;
+    pkts_sent++;
 
-    dbgx(1, "Sent packet " COUNTER_SPEC, stats.pkts_sent);
+    dbgx(1, "Sent packet " COUNTER_SPEC, pkts_sent);
 
 
     return (1);
 } /* live_callback() */
 
-static void
-signal_catcher(int signo)
-{
-    /* stdio in signal handlers causes a race condition, instead set a flag */
-    if (signo == SIGINT)
-        didsig = true;
 
-}

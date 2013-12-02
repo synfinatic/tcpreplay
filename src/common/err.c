@@ -155,4 +155,3 @@ _our_verbose_warnx(const char *fmt, ...) {
     (void)fprintf(stderr, "\n");
     va_end(ap);
 }
-

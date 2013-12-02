@@ -1,29 +1,40 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2006-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
 
 #include <stdlib.h>
 
-#include "tcpedit.h"
-#include "plugins.h"
-#include "tcpedit_stub.h"
+#include "dlt_plugins-int.h"
 #include "dlt_utils.h"
 #include "common.h"
 
@@ -39,8 +50,7 @@
 #include "dlt_linuxsll/linuxsll.h"
 #include "dlt_ieee80211/ieee80211.h"
 #include "dlt_radiotap/radiotap.h"
-#include "dlt_jnpr_ether/jnpr_ether.h"
-#include "dlt_pppserial/pppserial.h"
+
 
 /**
  * Everyone writing a DLT plugin, must add their registration function
@@ -61,9 +71,7 @@ tcpedit_dlt_register(tcpeditdlt_t *ctx)
     retcode += dlt_linuxsll_register(ctx);
     retcode += dlt_ieee80211_register(ctx);
     retcode += dlt_radiotap_register(ctx);
-    retcode += dlt_jnpr_ether_register(ctx);
-    retcode += dlt_pppserial_register(ctx);
-
+    
     if (retcode < 0)
         return TCPEDIT_ERROR;
     
@@ -83,7 +91,7 @@ tcpedit_dlt_register(tcpeditdlt_t *ctx)
  * mapping for bit_mask to bit_info.  If you're making changes here
  * then you almost certainly need to modify tcpeditdlt_t in dlt_plugins-int.h
  */
-const uint32_t tcpeditdlt_bit_map[] = {
+const u_int32_t tcpeditdlt_bit_map[] = {
     PLUGIN_MASK_PROTO,
     PLUGIN_MASK_SRCADDR,
     PLUGIN_MASK_DSTADDR
@@ -121,6 +129,7 @@ tcpedit_dlt_init(tcpedit_t *tcpedit, const int srcdlt)
 {
     tcpeditdlt_t *ctx;
     int rcode;
+    const char *dst_dlt_name = NULL;
 
     assert(tcpedit);
     assert(srcdlt >= 0);
@@ -137,15 +146,13 @@ tcpedit_dlt_init(tcpedit_t *tcpedit, const int srcdlt)
 
     /* register all our plugins */
     if (tcpedit_dlt_register(ctx) != TCPEDIT_OK) {
-        tcpedit_dlt_cleanup(ctx);
-        return NULL;
+        goto INIT_ERROR;
     }
 
     /* Choose decode plugin */
     if ((ctx->decoder = tcpedit_dlt_getplugin(ctx, srcdlt)) == NULL) {
         tcpedit_seterr(tcpedit, "No DLT plugin available for source DLT: 0x%x", srcdlt);
-        tcpedit_dlt_cleanup(ctx);
-        return NULL;
+        goto INIT_ERROR;
     }
 
     /* set our dlt type */
@@ -157,39 +164,14 @@ tcpedit_dlt_init(tcpedit_t *tcpedit, const int srcdlt)
     /* initalize decoder plugin */
     rcode = ctx->decoder->plugin_init(ctx);
     if (tcpedit_checkerror(ctx->tcpedit, rcode, NULL) != TCPEDIT_OK) {
-        tcpedit_dlt_cleanup(ctx);
-        return NULL;
+        goto INIT_ERROR;
     }
 
-
-    /* we're OK */
-    return ctx;
-}
-
-/**
- * \brief Call this to parse AutoOpts arguments for the DLT encoder plugin
- *
- * Was previously part of tcpedit_dlt_init(), but moved into it's own function
- * to allow a full programtic API.  Basically, if you're not using this function
- * you'll need to roll your own!
- * Returns 0 on success, -1 on error
- */
-int 
-tcpedit_dlt_post_args(tcpedit_t *tcpedit)
-{
-    tcpeditdlt_t *ctx;
-    const char *dst_dlt_name = NULL;
-    int rcode;
-    
-    assert(tcpedit);
-    ctx = tcpedit->dlt_ctx;
-    assert(ctx);
-    
     /* Select the encoder plugin */
     dst_dlt_name = OPT_ARG(DLT) ? OPT_ARG(DLT) : ctx->decoder->name;
     if ((ctx->encoder = tcpedit_dlt_getplugin_byname(ctx, dst_dlt_name)) == NULL) {
         tcpedit_seterr(tcpedit, "No output DLT plugin available for: %s", dst_dlt_name);
-        return TCPEDIT_ERROR;    
+        goto INIT_ERROR;
     }
     
     /* Figure out if we're skipping braodcast & multicast */
@@ -198,24 +180,37 @@ tcpedit_dlt_post_args(tcpedit_t *tcpedit)
 
     /* init encoder plugin if it's not the decoder plugin */
     if (ctx->encoder->dlt != ctx->decoder->dlt) {
-        if ((rcode = ctx->encoder->plugin_init(ctx)) != TCPEDIT_OK) {
-            /* plugin should generate the error */
-            return TCPEDIT_ERROR;
+        rcode = ctx->encoder->plugin_init(ctx);
+        if (tcpedit_checkerror(ctx->tcpedit, rcode, NULL) != TCPEDIT_OK) {
+            goto INIT_ERROR;
         }
     }
 
     /* parse the DLT specific options */
-    if ((rcode = tcpedit_dlt_parse_opts(ctx)) != TCPEDIT_OK) {
-        /* parser should generate the error */
-        return TCPEDIT_ERROR;
+    rcode = tcpedit_dlt_parse_opts(ctx);
+    if (tcpedit_checkerror(ctx->tcpedit, rcode, "parsing options") != TCPEDIT_OK) {
+        goto INIT_ERROR;
+    }
+
+
+    /* validate that the SRC/DST DLT + options give us enough info */
+    rcode = tcpedit_dlt_validate(ctx);
+    if (tcpedit_checkerror(ctx->tcpedit, rcode, "validating options") != TCPEDIT_OK) {
+        goto INIT_ERROR;
     }
 
     /* we're OK */
-    return tcpedit_dlt_post_init(ctx);
-} 
+    return ctx;
+
+INIT_ERROR:
+    tcpedit_dlt_cleanup(ctx);
+    return NULL;
+}
+ 
 
 /**
  * This is the recommended method to edit a packet.  Returns (new) total packet length
+ * FIXME: This is *broken*.  taking packet as a u_char*, but using it as a u_char **!
  */
 int
 tcpedit_dlt_process(tcpeditdlt_t *ctx, u_char **packet, int pktlen, tcpr_dir_t direction)
@@ -250,29 +245,6 @@ tcpedit_dlt_process(tcpeditdlt_t *ctx, u_char **packet, int pktlen, tcpr_dir_t d
     return rcode;
 }
 
-/**
- * \brief Call after tcpedit_dlt_post_args() to allow plugins to do special things
- * 
- * Useful for plugins to initalize sub-plugins and what not.
- * Returns the standard TCPEDIT_OK|ERROR|WARN
- */
-int 
-tcpedit_dlt_post_init(tcpeditdlt_t *tcpedit)
-{
-    
-    /* first init decoder */
-    if (tcpedit->decoder->plugin_post_init != NULL)
-        if (tcpedit->decoder->plugin_post_init(tcpedit) == TCPEDIT_ERROR)
-            return TCPEDIT_ERROR;
-            
-    /* the encoder */
-    if (tcpedit->encoder->plugin_post_init != NULL)
-        if (tcpedit->encoder->plugin_post_init(tcpedit) == TCPEDIT_ERROR)
-            return TCPEDIT_ERROR;
-    
-    return TCPEDIT_OK;
-}
-
 
 /**
  * What is the output DLT type???
@@ -280,7 +252,7 @@ tcpedit_dlt_post_init(tcpeditdlt_t *tcpedit)
 int 
 tcpedit_dlt_output_dlt(tcpeditdlt_t *ctx)
 {
-    uint16_t dlt;
+    u_int16_t dlt;
     assert(ctx);
         
     /* 

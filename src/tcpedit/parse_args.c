@@ -1,26 +1,39 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2006-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
 #include "defines.h"
 #include "common.h"
-#include "tcpedit.h"
+#include "tcpedit-int.h"
 #include "tcpedit_stub.h"
 #include "parse_args.h"
 #include "portmap.h"
@@ -35,10 +48,12 @@
  * returns -1 for error
  */
 int 
-tcpedit_post_args(tcpedit_t *tcpedit) {
+tcpedit_post_args(tcpedit_t **tcpedit_ex) {
+    tcpedit_t *tcpedit;
     int rcode = 0;
     long ttl;
-
+    assert(tcpedit_ex);
+    tcpedit = *tcpedit_ex;
     assert(tcpedit);
 
 
@@ -98,31 +113,32 @@ tcpedit_post_args(tcpedit_t *tcpedit) {
         tcpedit->cidrmap2 = tcpedit->cidrmap1;
 
     /* --fixcsum */
-    if (HAVE_OPT(FIXCSUM))
-        tcpedit->fixcsum = true;
+    if (HAVE_OPT(FIXCSUM)) {
+        tcpedit->fixcsum = TCPEDIT_FIXCSUM_ON;
+    } else if (HAVE_OPT(NOFIXCSUM)) {
+        tcpedit->fixcsum = TCPEDIT_FIXCSUM_DISABLE;
+    }
 
     /* --efcs */
     if (HAVE_OPT(EFCS)) 
-        tcpedit->efcs = true;
+        tcpedit->efcs = 1;
 
     /* --ttl */
     if (HAVE_OPT(TTL)) {
         if (strchr(OPT_ARG(TTL), '+')) {
-            tcpedit->ttl_mode = TCPEDIT_TTL_MODE_ADD;            
+            tcpedit->ttl_mode = TCPEDIT_TTL_ADD;            
         } else if (strchr(OPT_ARG(TTL), '-')) {
-            tcpedit->ttl_mode = TCPEDIT_TTL_MODE_SUB;            
+            tcpedit->ttl_mode = TCPEDIT_TTL_SUB;            
         } else {
-            tcpedit->ttl_mode = TCPEDIT_TTL_MODE_SET;           
+            tcpedit->ttl_mode = TCPEDIT_TTL_SET;            
         }
 
         ttl = strtol(OPT_ARG(TTL), (char **)NULL, 10);
         if (ttl < 0)
             ttl *= -1; /* convert to positive value */
             
-        if (ttl > 255) {
-            tcpedit_seterr(tcpedit, "Invalid --ttl value (must be 0-255): %ld", ttl);
-            return -1;
-        }
+        if (ttl > 255)
+            errx(-1, "Invalid --ttl value (must be 0-255): %ld", ttl);
 
         tcpedit->ttl_value = (u_int8_t)ttl;
     }
@@ -131,10 +147,6 @@ tcpedit_post_args(tcpedit_t *tcpedit) {
     if (HAVE_OPT(TOS))
         tcpedit->tos = OPT_VALUE_TOS;
 
-    /* --tclass */
-    if (HAVE_OPT(TCLASS))
-        tcpedit->tclass = OPT_VALUE_TCLASS;
-        
     /* --flowlabel */
     if (HAVE_OPT(FLOWLABEL))
         tcpedit->flowlabel = OPT_VALUE_FLOWLABEL;
@@ -145,11 +157,11 @@ tcpedit_post_args(tcpedit_t *tcpedit) {
         
     /* --mtu-trunc */
     if (HAVE_OPT(MTU_TRUNC))
-        tcpedit->mtu_truncate = true;
+        tcpedit->mtu_truncate = 1;
         
     /* --skipbroadcast */
     if (HAVE_OPT(SKIPBROADCAST))
-        tcpedit->skip_broadcast = true;
+        tcpedit->skip_broadcast = 1;
 
     /* --fixlen */
     if (HAVE_OPT(FIXLEN)) {
@@ -203,13 +215,13 @@ tcpedit_post_args(tcpedit_t *tcpedit) {
      * close to 32bit integers.
      */
     if (HAVE_OPT(SEED)) {
-        tcpedit->rewrite_ip = true;
+        tcpedit->rewrite_ip = TCPEDIT_REWRITE_IP_ON;
         srandom(OPT_VALUE_SEED);
         tcpedit->seed = random() + random() + random() + random() + random();
     }
 
     if (HAVE_OPT(ENDPOINTS)) {
-        tcpedit->rewrite_ip = true;
+        tcpedit->rewrite_ip = TCPEDIT_REWRITE_IP_ON;
         if (! parse_endpoints(&tcpedit->cidrmap1, &tcpedit->cidrmap2,
                     OPT_ARG(ENDPOINTS))) {
             tcpedit_seterr(tcpedit, 
@@ -239,17 +251,8 @@ tcpedit_post_args(tcpedit_t *tcpedit) {
         rcode = 1;
     }
      */
-     
-    /* parse the tcpedit dlt args */
-    rcode = tcpedit_dlt_post_args(tcpedit);
-    if (rcode < 0) {
-        errx(-1, "Unable to parse args: %s", tcpedit_geterr(tcpedit));
-    } else if (rcode == 1) {
-        warnx("%s", tcpedit_geterr(tcpedit));
-    }
-     
 
-    return 0;
+    return rcode;
 }
 
 

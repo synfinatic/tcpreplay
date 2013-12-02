@@ -1,32 +1,45 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2006-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <stdlib.h>
 #include <string.h>
 
+#include "dlt_plugins-int.h"
+#include "dlt_utils.h"
+#include "loop.h"
+#include "../dlt_null/null.h"
 #include "tcpedit.h"
 #include "common.h"
 #include "tcpr.h"
-#include "dlt_utils.h"
-#include "tcpedit_stub.h"
-#include "loop.h"
-#include "../dlt_null/null.h"
 
 /* 
  * Basically, DLT_LOOP and DLT_NULL are the same thing except that the PF_ value
@@ -37,7 +50,7 @@
 
 static char dlt_name[] = "loop";
 static char _U_ dlt_prefix[] = "loop";
-static uint16_t dlt_value = DLT_LOOP;
+static u_int16_t dlt_value = DLT_LOOP;
 
 /*
  * Function to register ourselves.  This function is always called, regardless
@@ -96,6 +109,7 @@ int
 dlt_loop_init(tcpeditdlt_t *ctx)
 {
     tcpeditdlt_plugin_t *plugin;
+    null_config_t *config;
     assert(ctx);
     
     if ((plugin = tcpedit_dlt_getplugin(ctx, dlt_value)) == NULL) {
@@ -103,6 +117,17 @@ dlt_loop_init(tcpeditdlt_t *ctx)
         return TCPEDIT_ERROR;
     }
     
+    /* allocate memory for our deocde extra data */
+    if (sizeof(null_extra_t) > 0)
+        ctx->decoded_extra = safe_malloc(sizeof(null_extra_t));
+
+    /* allocate memory for our config data */
+    if (sizeof(null_config_t) > 0)
+        plugin->config = safe_malloc(sizeof(null_config_t));
+    
+    config = (null_config_t *)plugin->config;
+    
+
     return TCPEDIT_OK; /* success */
 }
 

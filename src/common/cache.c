@@ -1,20 +1,33 @@
 /* $Id$ */
 
 /*
- *   Copyright (c) 2001-2010 Aaron Turner <aturner at synfin dot net>
+ * Copyright (c) 2001-2010 Aaron Turner.
+ * All rights reserved.
  *
- *   The Tcpreplay Suite of tools is free software: you can redistribute it 
- *   and/or modify it under the terms of the GNU General Public License as 
- *   published by the Free Software Foundation, either version 3 of the 
- *   License, or with the authors permission any later version.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- *   The Tcpreplay Suite is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU General Public License for more details.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the names of the copyright owners nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
  *
- *   You should have received a copy of the GNU General Public License
- *   along with the Tcpreplay Suite.  If not, see <http://www.gnu.org/licenses/>.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -125,7 +138,7 @@ read_cache(char **cachedata, const char *cachefile, char **comment)
     /* read in the cache */
     if ((COUNTER)(read_size = read(cachefd, *cachedata, cache_size)) 
             != cache_size)
-        errx(-1, "Cache data length (%zu bytes) doesn't match "
+        errx(-1, "Cache data length (%ld bytes) doesn't match "
             "cache header (" COUNTER_SPEC " bytes)", read_size, cache_size);
 
     dbgx(1, "Loaded in %llu packets from cache.", header.num_packets);
@@ -146,7 +159,7 @@ write_cache(tcpr_cache_t * cachedata, const int out_file, COUNTER numpackets,
 {
     tcpr_cache_t *mycache = NULL;
     tcpr_cache_file_hdr_t *cache_header = NULL;
-    uint32_t chars, last = 0;
+    u_int32_t chars, last = 0;
     COUNTER packets = 0;
     ssize_t written = 0;
 
@@ -163,7 +176,7 @@ write_cache(tcpr_cache_t * cachedata, const int out_file, COUNTER numpackets,
 
     /* we can't strlen(NULL) so ... */
     if (comment != NULL) {
-        cache_header->comment_len = htons((uint16_t)strlen(comment));
+        cache_header->comment_len = htons((u_int16_t)strlen(comment));
     } else {
         cache_header->comment_len = 0;
     }
@@ -245,7 +258,7 @@ add_cache(tcpr_cache_t ** cachedata, const int send, const tcpr_dir_t interface)
 {
     static tcpr_cache_t *lastcache = NULL;
     u_char *byte = NULL;
-    uint32_t bit;
+    u_int32_t bit;
     tcpr_dir_t result = TCPR_DIR_ERROR;
     COUNTER index;
 #ifdef DEBUG
@@ -324,7 +337,7 @@ tcpr_dir_t
 check_cache(char *cachedata, COUNTER packetid)
 {
     COUNTER index = 0;
-    uint32_t bit;
+    u_int32_t bit;
 
     assert(cachedata);
 
@@ -332,7 +345,7 @@ check_cache(char *cachedata, COUNTER packetid)
         err(-1, "packetid must be > 0");
 
     index = (packetid - 1) / (COUNTER)CACHE_PACKETS_PER_BYTE;
-    bit = (uint32_t)(((packetid - 1) % (COUNTER)CACHE_PACKETS_PER_BYTE) * 
+    bit = (u_int32_t)(((packetid - 1) % (COUNTER)CACHE_PACKETS_PER_BYTE) * 
         (COUNTER)CACHE_BITS_PER_PACKET) + 1;
 
 #ifdef DEBUG

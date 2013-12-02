@@ -39,22 +39,21 @@ Icon?
 ehthumbs.db
 Thumbs.db
 
+# configure files
+config.status
+*.in
+libtool
+.deps
+autom4te.cache
+src/config.h
+src/defines.h
+src/stamp-h1
+test/config
+
 # Temporary files 
 *.tmp
 .*.swp
 *.tmproj
-
-# CMake files 
-CMakeFiles
-CMakeCache.txt
-_CPack_Packages
-cmake_install.cmake
-CPackConfig.cmake
-CPackSourceConfig.cmake
-cmake/BuildDistTgz.cmake
-test/RunUnitTest.cmake
-test/Standard.cmake
-test/Tests.cmake
 
 # Misc files
 tcpreplay.spec

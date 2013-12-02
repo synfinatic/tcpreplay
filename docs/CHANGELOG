@@ -1,18 +1,73 @@
 $Id$
 
-??/??/2009: Version 4.0.0
-    - Switch from BSD to GPLv3 license (#371)
-    - Replace GNU autotools build scripts with CMake (#351)
-    - Native Win32 Support (#133)
-    - New QT4 based GUI (#314)
-    - Massive code cleanup (#375, #374)
-    - Create C/C++ libraries for tcpreplay, tcprewrite and tcpprep functionality (#358)
-    - Make tcpreplay libraries thread safe (#368)
-    - Add IPv6 packet editing support (#386)
+??/??/2013 Version 3.5.0
+    - Add netmap injector (appneta #1)
+    - Add --sleepmode option to handle high precision timing (#421)
+    - Update URL's to point to new tcpreplay website (#430)
+    - Improve & fix bugs in tcpcapinfo (#437)
+    - Fix statistics to be more industry standard (#443)
+    - Add --nofixcsum (#449)
+    - Fix compile failure under FreeBSD 9.0 (#450)
+    - Don't checksum packets before going through fragroute engine (#452)
+    - Add support for --maxsleep option to tcpreplay (#453)
+    - Fix segfault when rewriting multiple ports (#459)
+    - Fix bug with printing stats after CTRL-C (#482)
+    - Update autotools (#483)
+    - Don't recalculate UDP checksums if it's value is 0 (#490)
+    - Fix documentation of --efcs option to be 4, not 2 bytes (#495)
+    - Fix libdnet header detection under Debian distros (#499)
+    - Update GNU Autogen to 5.11.5 (#501)
+    - Fix --stats option for tcpreplay (#503)
+    - Add support for injecting directly via custom Linux kernel module (#505)
+    - Fix cidr code debugging (#506)
+    - Standardize on primary/secondary meaning of interfaces/tcpprep split (#507)
+
+08/15/2010 Version 3.4.5beta1
+    - First pass at fixing 'make test' on many little-endian systems (#429)
+    - Warn users when processing LINUX_SLL frames w/o an Ethernet source MAC (#434)
+    - Don't try to fragroute non-IPv4/v6 packets so we don't error out (#432)
+    - Initial Linux TX_RING sending support (#435)
+    - Update to GNU Autoconf 2.67 (#436)
+    - Add tcpcapinfo which dumps information about the pcap header/packets (#437)
+    - Add --dualfile support for replaying two files at the same time (#439)
+    - Fix bug where --tos=0 didn't do anything (#440)
+    - Fix crash when processing CIDR data (#441)
+
+04/04/2010 Version 3.4.4
+    - Set default timing method to either gtod or abstime (#404)
+    - Fix IPv6 parsing of CIDR's (#405)
+    - Add support for preloading the memory cache (#410)
+    - Generate more useful error when packets are too small (#411)
+    - Update to libopts/Autogen 5.9.9 (#412)
+    - Ship Win32Readme.txt file (#413)
+    - Update copyright notice to 2010 (#416)
+    - Dramatically enhance --portmap option (#417)
+    - Update autotools (#423)
+    - Add support for printing statistics periodically during the run (#424)
+    - Warn user when pcap snaplen < 65535 (#425)
+    - Add 802.1q processing support tcpprep (#428)
+
+06/25/2009: Version 3.4.3
+    - Link libnl when newer versions of libpcap require it (#397)
+    - Ship m4 directory (#398)
+    - Upgrade to latest autotools scripts (#400)
+    - Fix error message when running autogen.sh (#401)
+
+05/20/2009: Version 3.4.2
+    - Added extensive IPv6 support to tcprewrite & tcpreplay-edit (#11)
     - Add IPv6 fragroute support (#388)
-    - Add support for Juniper Encapsulated Ethernet DLT (#387)
-    - Properly process IPv6 extension headers (#396)
-    - Change default timing method to abstime/gtod (#404)
+    - Add IPv6 decoding support to tcpprep (#11)
+    - Fix compile time error in err.h (#390)
+    - Add --endpoints support in tcpreplay-edit (#393)
+
+02/18/2009: Version 3.4.1
+    - Sendpacket method did not match documentation (#361)
+    - Fix compile issue on systems without err.h (#363)
+    - Fix tcpprep --mac not processing non-IPv4 packets (#369)
+    - Always build tcpreplay w/ editing features as tcpreplay-edit (#372)
+    - Fix potential tcpbridge issues under OS X & *BSD (#373)
+    - Fix crash on 4 byte strictly aligned systems (#377)
+    - Add MTU truncation to tcprewrite/tcpreplay-edit (#379)
 
 01/15/2009: Version 3.4.0
     - Add libdnet and remove libnet support for sending packets (#302)
