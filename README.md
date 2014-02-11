@@ -1,3 +1,7 @@
+# !!!!Important!!!!
+
+This repo is no longer the official home of Tcpreplay.  For that please visit: https://github.com/appneta/tcpreplay
+
 # Tcpreplay
 
 The new home for Tcpreplay is on Github!
